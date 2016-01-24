@@ -9,3 +9,4 @@ module type NetAddress = sig
 end
 
 module IPv4 : NetAddress
+module IPv6 : NetAddress
