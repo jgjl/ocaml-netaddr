@@ -1,0 +1,4 @@
+B ../_build/default/lib
+FLG -w -40
+PKG base
+PKG stdint

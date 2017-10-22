@@ -1,4 +1,3 @@
-open Core.Std
 open Stdint
 
 module type NetAddress = sig
@@ -78,6 +77,7 @@ module IPv4 : NetAddress = struct
 
 end
 
+(*
 module IPv6 : NetAddress = struct
   open Uint128
 
@@ -166,3 +166,5 @@ module IPv6 : NetAddress = struct
     | Some addr -> to_string addr
 
 end
+
+*)
