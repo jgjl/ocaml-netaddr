@@ -6,7 +6,6 @@ module type NetAddress = sig
   val ( > ) : t -> t -> bool
   val of_string : string -> t option
   val to_string : t -> string
-  val opt_to_string : t option -> string
 end
 
 
@@ -26,42 +25,35 @@ module IPv4 : NetAddress = struct
   let (>) a b =
     (compare a b) > 0
 
-  let addr_from_bytes (b3,b2,b1,b0) =
-    if (b0 <= uint_8b1_0b0) && (b1 <= uint_8b1_0b0) && (b2 <= uint_8b1_0b0) && (b3 <= uint_8b1_0b0) then
-      Some (
-        shift_left b3 24
-        |> logor (shift_left b2 16)
-        |> logor (shift_left b1 8)
-        |> logor b0
-        )
-    else
-      None
-
-  let bytes_from_string s =
-    match String.split ~on:'.' s with
-      | [] -> None
-      | _ :: [] -> None
-      | _ :: _ :: [] -> None
-      | _ :: _ :: _ :: [] -> None
-      | b3 :: b2 :: b1 :: b0 :: []->
-        (
-          try
-            Some (of_string b3,
-                  of_string b2,
-                  of_string b1,
-                  of_string b0)
-          with
-            | _ -> None
-        )
-      | _ :: _ :: _ :: _ :: _ -> None
-
   let of_string s =
-    if Pervasives.(>) (String.length s) 15 then
+    if Pervasives.(>) (String.length s) 15 
+    || Pervasives.(<) (String.length s) 7 then
       None
     else
-      match bytes_from_string s with
-      | None -> None
-      | Some bytes_tuple -> addr_from_bytes bytes_tuple
+      begin
+        let elements = String.split_on_char '.' s in
+        if List.length elements = 4 then
+          begin
+            let join_elements acc element = 
+              match acc with
+              | None -> None
+              | Some acc_value ->
+                begin
+                  try
+                    let byte_value = of_string element in
+                    if compare byte_value zero >= 0 
+                    && compare byte_value (Uint32.of_int 255) <= 0 then
+                      Some (logor (shift_left acc_value 8) byte_value)
+                    else
+                      None
+                  with
+                    _ -> None
+                end in 
+            List.fold_left join_elements (Some zero) elements
+          end
+        else
+          None
+      end
 
   let to_string addr =
     let b0 = logand addr uint_8b1_0b0 in
@@ -69,11 +61,6 @@ module IPv4 : NetAddress = struct
     let b2 = shift_right (logand addr uint_8b1_16b0) 16 in
     let b3 = shift_right (logand addr uint_8b1_24b0) 24 in
     to_string b3 ^"."^ to_string b2 ^"."^ to_string b1 ^"."^ to_string b0
-
-  let opt_to_string opt_addr =
-    match opt_addr with
-    | None -> "None"
-    | Some addr -> to_string addr
 
 end
 

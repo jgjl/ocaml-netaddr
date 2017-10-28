@@ -5,7 +5,6 @@ module type NetAddress = sig
   val ( > ) : t -> t -> bool
   val of_string : string -> t option
   val to_string : t -> string
-  val opt_to_string : t option -> string
 end
 
 module IPv4 : NetAddress
