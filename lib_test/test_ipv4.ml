@@ -54,6 +54,23 @@ let test_str2netaddr_neg () =
   ] in
   List.iter run_twowaytest addr_list
 
+  (*
+  let test_add_netaddr () =
+    let addr_list = [
+      ("192.168.0.0", "192.168.0.1");
+      ("192.168.0.1", "192.168.0.2");
+      ("192.168.0.255", "192.168.1.0");
+      ("10.10.0.0", "10.10.0.1");
+      ("10.10.0.1", "10.10.0.2");
+      ("10.10.0.255", "10.10.1.0");
+      ("172.16.0.0", "172.16.0.1");
+      ("172.16.0.1", "172.16.0.2");
+      ("172.16.0.255", "172.16.1.0");
+      ("0.0.0.0", "0.0.0.1");
+      ("255.255.255.255", "255.255.255.255");
+    ] in
+    *)
+
 let suite = [
   "convert ip address from and to netaddr object, positive tests", `Quick, test_str2netaddr_pos;
   "convert ip address from and to netaddr object, negative tests", `Quick, test_str2netaddr_neg;

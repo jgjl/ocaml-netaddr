@@ -1,23 +1,29 @@
 open Stdint
 
+exception Result_out_of_range of string
+
 module type NetAddress = sig
   type t
   val ( < ) : t -> t -> bool
   val ( > ) : t -> t -> bool
   val of_string : string -> t option
   val to_string : t -> string
+  val add_int : t -> int -> t
+  val sub_int : t -> int -> t
+  val add : t -> t -> t
+  val sub : t -> t -> t
 end
 
 
 module IPv4 : NetAddress = struct
-  open Uint32
+  (*open Uint32*)
 
   type t = uint32
 
-  let uint_8b1_0b0 = of_string "0xff"
-  let uint_8b1_8b0 = of_string "0xff00"
-  let uint_8b1_16b0 = of_string "0xff0000"
-  let uint_8b1_24b0 = of_string "0xff000000"
+  let uint_8b1_0b0 = Uint32.of_string "0xff"
+  let uint_8b1_8b0 = Uint32.of_string "0xff00"
+  let uint_8b1_16b0 = Uint32.of_string "0xff0000"
+  let uint_8b1_24b0 = Uint32.of_string "0xff000000"
 
   let (<) (a) b =
     (compare a b) < 0
@@ -26,8 +32,8 @@ module IPv4 : NetAddress = struct
     (compare a b) > 0
 
   let of_string s =
-    if Pervasives.(>) (String.length s) 15 
-    || Pervasives.(<) (String.length s) 7 then
+    if (String.length s) > 15 
+    || (String.length s) < 7 then
       None
     else
       begin
@@ -40,27 +46,49 @@ module IPv4 : NetAddress = struct
               | Some acc_value ->
                 begin
                   try
-                    let byte_value = of_string element in
-                    if compare byte_value zero >= 0 
+                    let byte_value = Uint32.of_string element in
+                    if compare byte_value Uint32.zero >= 0 
                     && compare byte_value (Uint32.of_int 255) <= 0 then
-                      Some (logor (shift_left acc_value 8) byte_value)
+                      Some Uint32.(logor (shift_left acc_value 8) byte_value)
                     else
                       None
                   with
                     _ -> None
                 end in 
-            List.fold_left join_elements (Some zero) elements
+            List.fold_left join_elements (Some Uint32.zero) elements
           end
         else
           None
       end
 
-  let to_string addr =
-    let b0 = logand addr uint_8b1_0b0 in
-    let b1 = shift_right (logand addr uint_8b1_8b0) 8 in
-    let b2 = shift_right (logand addr uint_8b1_16b0) 16 in
-    let b3 = shift_right (logand addr uint_8b1_24b0) 24 in
-    to_string b3 ^"."^ to_string b2 ^"."^ to_string b1 ^"."^ to_string b0
+  let to_string netaddr =
+    let b0 = Uint32.(logand netaddr uint_8b1_0b0) in
+    let b1 = Uint32.(shift_right (logand netaddr uint_8b1_8b0)) 8 in
+    let b2 = Uint32.(shift_right (logand netaddr uint_8b1_16b0)) 16 in
+    let b3 = Uint32.(shift_right (logand netaddr uint_8b1_24b0)) 24 in
+    Uint32.(to_string b3 ^"."^ to_string b2 ^"."^ to_string b1 ^"."^ to_string b0)
+
+  let add netaddr summand =
+    Uint32.(
+      if (max_int - netaddr) < summand then
+        raise (Result_out_of_range (Printf.sprintf "%s + %s > %s" (to_string netaddr) (to_string summand) (to_string max_int)))
+      else
+        netaddr + summand
+    )
+
+  let sub netaddr subtrahend =
+    Uint32.(
+      if netaddr < subtrahend then
+        raise (Result_out_of_range (Printf.sprintf "%s - %s < 0" (to_string netaddr) (to_string subtrahend)))
+      else
+        netaddr - subtrahend
+    )
+
+  let add_int netaddr summand =
+    add netaddr (Uint32.of_int summand)
+
+  let sub_int netaddr subtrahend =
+    sub netaddr (Uint32.of_int subtrahend)
 
 end
 
