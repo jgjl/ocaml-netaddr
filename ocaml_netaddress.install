@@ -1,0 +1,13 @@
+lib: [
+  "_build/install/default/lib/ocaml_netaddress/META" {"META"}
+  "_build/install/default/lib/ocaml_netaddress/opam" {"opam"}
+  "_build/install/default/lib/ocaml_netaddress/netaddress.cmi"
+  "_build/install/default/lib/ocaml_netaddress/netaddress.cmx"
+  "_build/install/default/lib/ocaml_netaddress/netaddress.cmt"
+  "_build/install/default/lib/ocaml_netaddress/netaddress.cmti"
+  "_build/install/default/lib/ocaml_netaddress/netaddress.mli"
+  "_build/install/default/lib/ocaml_netaddress/ocaml_netaddress.cma"
+  "_build/install/default/lib/ocaml_netaddress/ocaml_netaddress.cmxa"
+  "_build/install/default/lib/ocaml_netaddress/ocaml_netaddress.a"
+  "_build/install/default/lib/ocaml_netaddress/ocaml_netaddress.cmxs"
+]

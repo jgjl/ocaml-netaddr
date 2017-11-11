@@ -1,6 +1,6 @@
 (jbuild_version 1)
 (library
- ((name        ocaml_netaddr)
-  (public_name ocaml_netaddr)
+ ((name        ocaml_netaddress)
+  (public_name ocaml_netaddress)
   (libraries   (stdint core))
   (wrapped false)))

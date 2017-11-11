@@ -1,1 +1,9 @@
 PKG stdint
+PKG alcotest
+
+FLG -w -40
+
+S lib
+S lib_test
+V
+B _build/**

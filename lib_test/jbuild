@@ -2,7 +2,7 @@
 (executables
  ((names (test))
   (libraries (
-    alcotest ocaml_netaddr))))
+    alcotest ocaml_netaddress))))
 
 (alias
  ((name    runtest)
