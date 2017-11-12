@@ -1,0 +1,13 @@
+lib: [
+  "_build/install/default/lib/netaddress/META" {"META"}
+  "_build/install/default/lib/netaddress/opam" {"opam"}
+  "_build/install/default/lib/netaddress/netaddress.cmi"
+  "_build/install/default/lib/netaddress/netaddress.cmx"
+  "_build/install/default/lib/netaddress/netaddress.cmt"
+  "_build/install/default/lib/netaddress/netaddress.cmti"
+  "_build/install/default/lib/netaddress/netaddress.mli"
+  "_build/install/default/lib/netaddress/netaddress.cma"
+  "_build/install/default/lib/netaddress/netaddress.cmxa"
+  "_build/install/default/lib/netaddress/netaddress.a"
+  "_build/install/default/lib/netaddress/netaddress.cmxs"
+]

@@ -1,0 +1,73 @@
+
+open Stdint
+
+exception Result_out_of_range of string
+
+module type IPv6 = sig
+  type t = uint128
+  val ( < ) : t -> t -> bool
+  val ( > ) : t -> t -> bool
+  val of_string : string -> t option
+  val to_string : t -> string
+  val add_int : t -> int -> t
+  val sub_int : t -> int -> t
+  val add : t -> t -> t
+  val sub : t -> t -> t
+end
+
+module IPv6 : IPv6 = struct
+  open Uint128
+
+  type t = uint128
+
+  let uint_16b1_0b0 = of_string "0xffff"
+
+  let (<) (a) b =
+    (compare a b) < 0
+
+  let (>) a b =
+    (compare a b) > 0
+
+  let of_string s =
+    if Pervasives.(>) (String.length s) 39 then
+      None
+    else
+      (*
+      let element_list = List.rev (String.split ~on:':' s) in
+      parse_element_list element_list
+      *)
+      Some zero
+
+  let to_string addr =
+    ""
+    (*
+    let b0 = logand addr uint_16b1_0b0 in
+    let b1 = shift_right (logand addr uint_16b1_16b0) 8 in
+    let b2 = shift_right (logand addr uint_16b1_32b0) 16 in
+    let b3 = shift_right (logand addr uint_16b1_48b0) 24 in
+    to_string b3 ^"."^ to_string b2 ^"."^ to_string b1 ^"."^ to_string b0
+    *)
+
+  let add netaddr summand =
+    Uint128.(
+      if (max_int - netaddr) < summand then
+        raise (Result_out_of_range (Printf.sprintf "%s + %s > %s" (to_string netaddr) (to_string summand) (to_string max_int)))
+      else
+        netaddr + summand
+    )
+
+  let sub netaddr subtrahend =
+    Uint128.(
+      if netaddr < subtrahend then
+        raise (Result_out_of_range (Printf.sprintf "%s - %s < 0" (to_string netaddr) (to_string subtrahend)))
+      else
+        netaddr - subtrahend
+    )
+
+  let add_int netaddr summand =
+    add netaddr (Uint128.of_int summand)
+
+  let sub_int netaddr subtrahend =
+    sub netaddr (Uint128.of_int subtrahend)
+
+end

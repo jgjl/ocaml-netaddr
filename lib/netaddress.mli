@@ -18,6 +18,7 @@ exception Result_out_of_range of string
 
 module type NetAddress = sig
   type t
+  val one : t
   val ( < ) : t -> t -> bool
   val ( > ) : t -> t -> bool
   val of_string : string -> t option
@@ -29,4 +30,4 @@ module type NetAddress = sig
 end
 
 module IPv4 : NetAddress
-(*module IPv6 : NetAddress*)
+module IPv6 : NetAddress
