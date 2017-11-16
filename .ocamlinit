@@ -1,6 +1,4 @@
-#require "core_kernel";;
-#require "core";;
 #require "stdint";;
 #directory "_build";;
-#load "netaddr.cmo";;
+#load "netaddress.cmo";;
 open Netaddress;;

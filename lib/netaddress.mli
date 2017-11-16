@@ -29,5 +29,21 @@ module type NetAddress = sig
   val sub : t -> t -> t
 end
 
-module IPv4 : NetAddress
-module IPv6 : NetAddress
+module type IPv4 = sig
+  type t
+  include NetAddress with type t := t
+end
+
+module type IPv6 = sig
+  type t
+  include NetAddress with type t := t
+  (*
+  val of_ipv4 : IPv4.t -> t
+  *)
+end
+
+(*
+type ipaddress =
+  | IPv4Address of IPv4.t
+  | IPv6Address of IPv6.t
+  *)
