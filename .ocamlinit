@@ -1,4 +1,6 @@
 #require "stdint";;
-#directory "_build";;
-#load "netaddress.cmo";;
-open Netaddress;;
+#directory "_build/default/lib";;
+#load "Netaddress__Address.cmo";;
+#load "Netaddress__Ipv4.cmo";;
+#load "Netaddress__Ipv6.cmo";;
+#load "Netaddress.cmo";;

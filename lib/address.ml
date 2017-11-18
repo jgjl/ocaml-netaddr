@@ -1,9 +1,10 @@
-open Stdint
 
 exception Result_out_of_range of string
 exception Parser_error of string
 
-module type NetAddress = sig
+
+(*
+module type Address = sig
   type t
   val one : t
   val ( < ) : t -> t -> bool
@@ -15,15 +16,17 @@ module type NetAddress = sig
   val add : t -> t -> t
   val sub : t -> t -> t
 end
+*)
 
+(*
 module type IPv4 = sig
   type t
-  include NetAddress with type t := t
+  include Address with type t := t
 end
 
 module type IPv6 = sig
   type t
-  include NetAddress with type t := t
+  include Address with type t := t
   (*
   val of_ipv4 : IPv4.t -> t
   *)
@@ -234,3 +237,4 @@ module IPv6 : IPv6 = struct
     sub netaddr (Uint128.of_int subtrahend)
 
 end
+*)

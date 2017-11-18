@@ -1,6 +1,9 @@
 (jbuild_version 1)
 (library
- ((name        netaddress)
-  (public_name netaddress)
-  (libraries   (stdint))
-  (wrapped false)))
+ (
+   (name        Netaddress)
+   (public_name Netaddress)
+   (libraries   (stdint))
+   (modules     (address ipv4 ipv6))
+ )
+)

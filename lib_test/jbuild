@@ -2,7 +2,7 @@
 (executables
  ((names (test))
   (libraries (
-    alcotest netaddress))))
+    alcotest Netaddress))))
 
 (alias
  ((name    runtest)
