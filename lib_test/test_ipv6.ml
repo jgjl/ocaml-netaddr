@@ -6,10 +6,12 @@ let test_str2netaddr () =
       | Some netaddrv6 -> Netaddress.Ipv6.to_string netaddrv6
       | None -> "" 
     in
-    Alcotest.(check string) ("Conversion of " ^ addr_str ^ " from and to netaddr.") addr_str stringv6
+    Alcotest.(check string) ("Conversion of " ^ addr_str ^ " from and to netaddr -" ^ stringv6 ^ "-.") addr_str stringv6
   in
   let addr_list = [
     "::";
+    "2003::";
+    "2003:1001::";
     "::1";
     "ffdb::1";
     "2004::4";

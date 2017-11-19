@@ -3,6 +3,24 @@ open Stdint
 
 type t = uint128
 
+type cur_streak = { cur_streak_start : int; cur_streak_len : int}
+type max_streak = { max_streak_start : int; max_streak_len : int}
+type streak = { streak_start : int; streak_len : int}
+
+let shift_list = [112;96;80;64;48;32;16;0]
+
+let max_streak_of_cur_streak cur_streak =
+  {max_streak_start = cur_streak.cur_streak_start; 
+   max_streak_len = cur_streak.cur_streak_len}
+
+let streak_of_cur_streak cur_streak =
+  {streak_start = cur_streak.cur_streak_start; 
+   streak_len = cur_streak.cur_streak_len}
+
+let streak_of_max_streak max_streak =
+  {streak_start = max_streak.max_streak_start; 
+   streak_len = max_streak.max_streak_len}
+
 let one = Uint128.one
 
 let mask_16lsb = Uint128.of_string "0xffff"
@@ -13,98 +31,141 @@ let (<) (a) b =
 let (>) a b =
   (Uint128.compare a b) > 0
 
+let find_first_longest_streak element_selector element_list =
+  Pervasives.(
+    let detect_list (i, cur_opt, max_opt) value = 
+    begin
+      let element_selected = element_selector value in
+      print_string (" Selected element " ^ string_of_int i ^ " : " ^ string_of_bool element_selected ^ "\n");
+      let new_cur, new_max = 
+        match cur_opt with
+        | None ->
+        begin
+          if element_selected then
+            Some {cur_streak_start = i; cur_streak_len = 1}, max_opt
+          else 
+            None, max_opt
+        end
+        | Some last_cur ->
+        begin
+          if element_selected then
+            Some {last_cur with cur_streak_len = last_cur.cur_streak_len + 1}, max_opt
+          else 
+            match max_opt with
+            | None -> None, Some (max_streak_of_cur_streak last_cur)
+            | Some last_max when last_cur.cur_streak_len > last_max.max_streak_len-> None, Some (max_streak_of_cur_streak last_cur)
+            | Some last_max -> None, Some {max_streak_start = last_cur.cur_streak_start; 
+                                           max_streak_len = last_cur.cur_streak_len}
+        end in
+      (succ i), new_cur, new_max
+    end in
+    match List.fold_left detect_list (0, None, None) element_list with
+    | _, Some cur_streak, None ->
+      Some (streak_of_cur_streak cur_streak)
+    | _, Some cur_streak, Some max_streak when cur_streak.cur_streak_len > max_streak.max_streak_len -> 
+      Some (streak_of_cur_streak cur_streak)
+    | _, _, Some max_streak -> 
+      Some (streak_of_max_streak max_streak)
+    | _, _, None -> 
+      None
+  )
+
+let string_list_to_value hex_elements streak_opt =
+  let full_list = match streak_opt with
+  | None -> Some (List.map Uint128.of_string hex_elements), None
+  | Some streak -> 
+    let to_shifted_value e shiftwidth =
+      let value = Uint128.of_string e in
+        Some Uint128.(shift_left value shiftwidth)
+      in
+    List.map2 to_shifted_value hex_elements shift_list
+    in
+  full_list
+
 let of_string s =
   if Pervasives.( (String.length s) > 39 || (String.length s) < 2) then
     None
   else
     begin
       let elements = String.split_on_char ':' s in
-      if Pervasives.( List.length elements > 7 || List.length elements < 2 ) then
+      if Pervasives.( List.length elements > 8 || List.length elements < 2 ) then
         None
       else
         try
-          let hex_elements = List.map (fun e -> if String.length e >= 5 then
-                                raise (Address.Parser_error "String too long")
-                              else
-                                "0x" ^ e) elements in
-          print_string (String.concat " " hex_elements);
-          (*
-          let _, _, zero_start List.fold_left (fun (i, cur_zero_opt, prev_zeros_start_opt, prev_zero_len_opt) e -> 
-                                          match cur_zero_opt, prev_zeros_opt, e with
-                                          | None, None, "" -> (i+1, 1, None)
-                                          | None, None, _  -> (i+1, None, None)
-                                          | Some cur_zero, None, "" when cur_zero >= 2 -> raise (Parser_error "Too many '::'")
-                                          | Some cur_zero, None, "" -> (i+1, Some (cur_zero+1), None)
-                                          | Some cur_zero, None, _ when cur_zero > 1 -> (i+1, None, Some (i-cur_zero-1))
-                                          | Some cur_zero, None, _ -> (i+1, None, None)
-                                          | None, Some prev_zero, "" -> (i+1, Some 1, Some prev_zero)
-                                          | None, Some prev_zero, _ -> (i+1, None, Some prev_zero)
-                                          | Some cur_zero, Some prev_zero, "" -> raise (Parser_error "Too many '::'")
-                                          | Some cur_zero, Some prev_zero, _ -> (i+1, None, Some prev_zero)
-                                          ) (0, None, None) elements in
-          *)
-          Some Uint128.zero
+          let length = List.length elements in
+          let split_parts (i, ee, p1, p2) e =
+          let hex_element_parts = List.fold_left Pervasives.(fun (i, ee, p1, p2) e -> 
+                                                    if String.length e >= 5 then
+                                                      raise (Address.Parser_error "String too long.")
+                                                    else if (String.length e = 0) then
+                                                      begin
+                                                        if i = 0 then
+                                                          (i+1, ee + 1, None, None)
+                                                        else
+                                                          if ee > 0 then
+                                                            raise (Address.Parser_error "Too many :s.")
+                                                          else
+                                                            if i = length - 1 then
+                                                              (i+1, ee + 1, p1, p2)
+                                                            else
+                                                              if 
+                                                      end
+                                                    else
+                                                    ("0x" ^ e)) elements in
+
+          print_string (" Parsing, this is what I got: " ^ String.concat " " hex_elements ^ "\n");
+          let streak = find_first_longest_streak (String.equal "-") hex_elements in
+          let result_value = string_list_to_value hex_elements streak in
+          Some result_value
         with
           Address.Parser_error e -> None
     end
 
 let to_string netaddr =
   Uint128.(
-    let shift_list = [112;96;80;64;48;32;16;0] in
+    print_string (" int value: " ^ to_string netaddr ^ "\n");
+    (*let shift_list = [112;96;80;64;48;32;16;0] in*)
     (* Shift and 'and' each 16bit part of the value*)
     let b16_values = List.map (fun sw -> logand (shift_right netaddr sw) mask_16lsb) shift_list in
     (* Find the longest list of conscutive zeros to be replaced by :: in the output *)
-    let detect_0_list (i, cur_len_opt, cur_start_opt, max_len_opt, max_start_opt) value = 
-      Pervasives.(
-        if value <> zero then
-          (i + 1, None, None, max_len_opt, max_start_opt)
-        else
-          match cur_len_opt, cur_start_opt, max_len_opt, max_start_opt with
-          | None, None, None, None ->
-            (i+1, Some 1, Some i, Some 1, Some i)
-          | None, None, Some max_len, Some max_start -> 
-            (i+1, Some 1, Some i, Some max_len, Some max_start)
-          | Some cur_len, Some cur_start, Some max_len, Some max_start when cur_len > max_len ->
-            (i+1, Some (cur_len + 1), Some cur_start, Some (cur_len + 1), Some cur_start)
-          | Some cur_len, Some cur_start, Some max_len, Some max_start ->
-            (i+1, Some (cur_len + 1), Some cur_start, Some max_len, Some max_start)
-          | _, _, _, _ -> raise (Address.Parser_error "E0")
-        ) in
     (* Convert value to hex, remove '0x' prefix *)
     let uint_to_hex v = 
       let hex_raw = Uint128.to_string_hex v in
       let hex_raw_len = String.length hex_raw in
       String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
       in
-    match (List.fold_left detect_0_list (0, None, None, None, None) b16_values) with
+    let string_fold_fun = match find_first_longest_streak (fun e -> Uint128.(compare e zero) = 0) b16_values with
       (* No list of consecutive zeros found, just print every element separated by ':' *)
-      | _, _, _, None, None ->
-        print_string "3";
-        let result_string, _ = List.fold_left (fun (a,i) v -> match i with
-                          | 0 -> to_string_hex v, Pervasives.(i+1)
-                          | n -> a ^ (to_string_hex v), Pervasives.(i+1))
-                        ("",0) b16_values in
-        result_string
+      | None ->
+        (fun (a,i) v -> match i with
+                        | 0 -> to_string_hex v, Pervasives.(succ i)
+                        | n -> a ^ (to_string_hex v), Pervasives.(succ i)
+        )
       (* List of consecutive zeros found, replace it by '::', print every element separated 
           by ':' elsewhere *)
-      | _, _, _, Some max_len, Some max_start -> 
-        print_string "4";
+      | Some streak -> 
         Pervasives.(
-          let result_string, _ = List.fold_left (fun (a,i) v -> 
-                            if (i = 0 && max_start = 0) || 
-                              (max_start < i && max_start+max_len > i) then
-                              a, i+1
-                            else if (max_start < i) && (max_start+max_len) = i then
-                              (a ^ "::" ^ uint_to_hex v), i+1
-                            else
-                              (a ^ ":" ^ uint_to_hex v), i+1)
-                          ("",0) b16_values in
-          result_string
-        )
-      | a, b, c, d, e -> 
-        print_string "5";
-        raise (Address.Parser_error "E1")
-  )
+          print_string ("\n Streak start: " ^ (string_of_int streak.streak_start) ^ "\n");
+          print_string (" Streak length: " ^ (string_of_int streak.streak_len) ^ "\n");
+          (fun (a,i) v -> if (i = 0 && streak.streak_start = 0) || 
+                            (streak.streak_start < i && (streak.streak_start+streak.streak_len-1) > i) then
+                            a, succ i
+                          else if (streak.streak_start < i) && (streak.streak_start+streak.streak_len-1) = i then
+                            begin
+                              print_string ("Hallo i=" ^ Pervasives.string_of_int i ^ "\n");
+                              if i = 7 && v = zero then
+                                (a ^ "::"), succ i
+                              else
+                                (a ^ "::" ^ uint_to_hex v), succ i
+                            end
+                          else
+                            (a ^ ":" ^ uint_to_hex v), succ i
+          )
+        ) in
+    match List.fold_left string_fold_fun ("", 0) b16_values with
+    | address_string, 8 -> address_string
+    | _, i -> raise (Address.Parser_error ("Did not get 8 elements but " ^ string_of_int i))
+    )
 
 let add netaddr summand =
   Uint128.(
