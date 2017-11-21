@@ -70,19 +70,9 @@ let find_first_longest_streak element_selector element_list =
       None
   )
 
-let string_list_to_value hex_elements streak_opt =
-  let full_list = match streak_opt with
-  | None -> Some (List.map Uint128.of_string hex_elements), None
-  | Some streak -> 
-    let to_shifted_value e shiftwidth =
-      let value = Uint128.of_string e in
-        Some Uint128.(shift_left value shiftwidth)
-      in
-    List.map2 to_shifted_value hex_elements shift_list
-    in
-  full_list
-
 let of_string s =
+  Some Uint128.one
+  (*
   if Pervasives.( (String.length s) > 39 || (String.length s) < 2) then
     None
   else
@@ -93,7 +83,10 @@ let of_string s =
       else
         try
           let length = List.length elements in
-          let split_parts (i, ee, p1, p2) e =
+          let split_parts (i, ee, p1, p2) e = 
+            if String.length e >= 5 then
+              raise (Address.Parser_error "String too long.")
+            
           let hex_element_parts = List.fold_left Pervasives.(fun (i, ee, p1, p2) e -> 
                                                     if String.length e >= 5 then
                                                       raise (Address.Parser_error "String too long.")
@@ -120,6 +113,7 @@ let of_string s =
         with
           Address.Parser_error e -> None
     end
+    *)
 
 let to_string netaddr =
   Uint128.(

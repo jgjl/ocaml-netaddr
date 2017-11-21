@@ -3,7 +3,7 @@
  (
    (name        Netaddress)
    (public_name Netaddress)
-   (libraries   (stdint))
+   (libraries   (stdint angstrom))
    (modules     (address ipv4 ipv6))
  )
 )

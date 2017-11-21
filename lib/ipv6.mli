@@ -1,4 +1,9 @@
 
+(*
+    Text representation of IPv6 addresses
+    https://tools.ietf.org/html/rfc4291
+*)
+
 type t
 val ( < ) : t -> t -> bool
 val ( > ) : t -> t -> bool

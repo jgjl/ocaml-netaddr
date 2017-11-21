@@ -1,4 +1,5 @@
 #require "stdint";;
+#require "angstrom";;
 #directory "_build/default/lib";;
 #load "Netaddress__Address.cmo";;
 #load "Netaddress__Ipv4.cmo";;

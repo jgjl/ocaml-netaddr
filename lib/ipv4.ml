@@ -3,6 +3,28 @@ open Stdint
 
 type t = uint32
 
+module Parser = struct
+  open Angstrom
+
+  let is_dot =
+    function | '.' -> true | _ -> false
+
+  let is_alldigits = 
+    function | '0' .. '9' -> true | _ -> false
+
+  let is_bytedigit_two = 
+    function | '0' .. '2' -> true | _ -> false
+
+  let is_bytedigit_five = 
+    function | '0' .. '5' -> true | _ -> false
+
+  let integer =
+    take_while1 (function '0' .. '9' -> true | _ -> false) >>| int_of_string
+
+  let parse_address address_string =
+    parse_string integer address_string
+end
+
 let one = Uint32.one
 
 let mask_8lsb = Uint32.of_string "0xff"

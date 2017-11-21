@@ -1,4 +1,8 @@
 B ../_build/default/lib
 FLG -open Netaddress -w -40
+PKG angstrom
+PKG bigarray
 PKG bytes
+PKG result
 PKG stdint
+PKG unix

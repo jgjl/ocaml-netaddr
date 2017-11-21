@@ -7,6 +7,8 @@
        https://www.iana.org/assignments/ipv4-address-space/ipv4-address-space.xhtml
        https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
        Create automatic import script? The data is available as XML and csv.
+       https://www.iana.org/assignments/ipv4-address-space/ipv4-address-space.csv
+       https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space-1.csv
 
     Ideas
 

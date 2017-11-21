@@ -18,6 +18,7 @@ depends: [
   "jbuilder"     {build & >="1.0"}
   "configurator" {build}
   "stdint"
+  "angstrom"
   "alcotest" {test & >="0.7.0"}
 ]
 available: [ocaml-version >= "4.05.0"]
