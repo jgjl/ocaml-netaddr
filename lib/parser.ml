@@ -5,8 +5,18 @@ open Angstrom
 let is_dot =
     function | '.' -> true | _ -> false
 
-let is_alldigits = 
+let is_colon =
+    function | ':' -> true | _ -> false
+
+let is_all_digits = 
     function | '0' .. '9' -> true | _ -> false
+
+let is_all_hexdigits = 
+    function 
+    | '0' .. '9' -> true 
+    | 'a' .. 'f' -> true 
+    | 'A' .. 'F' -> true 
+    | _ -> false
 
 let is_zero = 
     function | '0' -> true | _ -> false
@@ -51,28 +61,28 @@ let read_byte_3digits_20_4X =
     lift3 (fun dig1 dig2 dig3 -> (String.make 1 dig1) ^ (String.make 1 dig2) ^ (String.make 1 dig3))
         (satisfy is_two) 
         (satisfy is_two2four) 
-        (satisfy is_alldigits)
+        (satisfy is_all_digits)
 
 let read_byte_3digits_1XX =
     lift3 (fun dig1 dig2 dig3 -> (String.make 1 dig1) ^ (String.make 1 dig2) ^ (String.make 1 dig3))
         (satisfy is_one) 
-        (satisfy is_alldigits) 
-        (satisfy is_alldigits)
+        (satisfy is_all_digits) 
+        (satisfy is_all_digits)
 
 let read_byte_3digits_0XX =
     lift3 (fun dig1 dig2 dig3 -> (String.make 1 dig1) ^ (String.make 1 dig2) ^ (String.make 1 dig3))
         (satisfy is_zero) 
-        (satisfy is_alldigits) 
-        (satisfy is_alldigits)
+        (satisfy is_all_digits) 
+        (satisfy is_all_digits)
 
 let read_byte_2digits_XX =
     lift2 (fun dig1 dig2 -> (String.make 1 dig1) ^ (String.make 1 dig2))
-        (satisfy is_alldigits) 
-        (satisfy is_alldigits)
+        (satisfy is_all_digits) 
+        (satisfy is_all_digits)
 
 let read_byte_1digits_X =
     lift (fun dig1 -> String.make 1 dig1)
-        (satisfy is_alldigits)
+        (satisfy is_all_digits)
 
 let testbyte =
     (choice [read_byte_3digits_25X;
@@ -97,19 +107,19 @@ let parse_ipv4 ipv4_string =
     | Result.Ok result -> String.concat "." (List.map string_of_int result) 
     | Result.Error message -> message
 
-(*
+let read_16bit =
+    scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 4 then
+                            Some (pos + 1)
+                        else
+                            None) 
+
 let parser_ipv6 = 
-    lift (fun x -> print_string x; [1])
-    (*
-    (lift4 bytes_to_uint128
-    (testbyte <* (skip is_dot))  
-    (testbyte <* (skip is_dot)) 
-    (testbyte <* (skip is_dot)) 
-    (testbyte <* end_of_input)) 
-    *)
+    lift3 (fun s m e -> (List.map int_of_string (List.concat [[s];m;[e]])))
+        (read_16bit <* (skip is_colon))
+        (many (read_16bit <* (skip is_colon)))
+        (read_16bit <* end_of_input)
 
 let parse_ipv6 ipv6_string =
     match parse_string parser_ipv6 ipv6_string with
-    | Result.Ok result -> result (*String.concat ":" (List.map string_of_int result)*)
-    | Result.Error message -> message
-*)
+    | Result.Ok result -> String.concat "-:-" (List.map string_of_int result)
+    | Result.Error message -> "ERROR: " ^ message

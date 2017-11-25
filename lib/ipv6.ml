@@ -70,50 +70,19 @@ let find_first_longest_streak element_selector element_list =
       None
   )
 
+let strings_to_value list =
+  List.fold_left (fun a e -> 
+                    Uint128.(
+                      logor (shift_left a 16) (of_int e)
+                    )) Uint128.zero list
+
 let of_string s =
-  Some Uint128.one
-  (*
   if Pervasives.( (String.length s) > 39 || (String.length s) < 2) then
     None
   else
-    begin
-      let elements = String.split_on_char ':' s in
-      if Pervasives.( List.length elements > 8 || List.length elements < 2 ) then
-        None
-      else
-        try
-          let length = List.length elements in
-          let split_parts (i, ee, p1, p2) e = 
-            if String.length e >= 5 then
-              raise (Address.Parser_error "String too long.")
-            
-          let hex_element_parts = List.fold_left Pervasives.(fun (i, ee, p1, p2) e -> 
-                                                    if String.length e >= 5 then
-                                                      raise (Address.Parser_error "String too long.")
-                                                    else if (String.length e = 0) then
-                                                      begin
-                                                        if i = 0 then
-                                                          (i+1, ee + 1, None, None)
-                                                        else
-                                                          if ee > 0 then
-                                                            raise (Address.Parser_error "Too many :s.")
-                                                          else
-                                                            if i = length - 1 then
-                                                              (i+1, ee + 1, p1, p2)
-                                                            else
-                                                              if 
-                                                      end
-                                                    else
-                                                    ("0x" ^ e)) elements in
-
-          print_string (" Parsing, this is what I got: " ^ String.concat " " hex_elements ^ "\n");
-          let streak = find_first_longest_streak (String.equal "-") hex_elements in
-          let result_value = string_list_to_value hex_elements streak in
-          Some result_value
-        with
-          Address.Parser_error e -> None
-    end
-    *)
+    match Angstrom.parse_string Netaddress__Parser.parser_ipv6 s with
+    | Result.Ok result -> Some (strings_to_value result)
+    | _ -> None
 
 let to_string netaddr =
   Uint128.(

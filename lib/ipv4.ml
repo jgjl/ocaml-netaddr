@@ -30,9 +30,13 @@ let strings_to_value byte_list =
   | _ -> raise (Address.Parser_error "Parser failed")
 
 let of_string s : t option =
-  match Angstrom.parse_string Parser.parser_ipv4 s with
-  | Result.Ok result -> Some (strings_to_value result)
-  | _ -> None
+  if (String.length s) >= 16 
+  || (String.length s) <= 6 then
+    None
+  else
+    match Angstrom.parse_string Parser.parser_ipv4 s with
+    | Result.Ok result -> Some (strings_to_value result)
+    | _ -> None
 
 let to_string netaddr =
   Uint32.(
