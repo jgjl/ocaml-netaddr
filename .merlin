@@ -1,4 +1,5 @@
 PKG stdint
+PKG angstrom
 PKG alcotest
 
 FLG -w -40
