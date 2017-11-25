@@ -6,3 +6,4 @@
 #load "Netaddress__Ipv6.cmo";;
 #load "Netaddress__Parser.cmo";;
 #load "Netaddress.cmo";;
+open Netaddress;;

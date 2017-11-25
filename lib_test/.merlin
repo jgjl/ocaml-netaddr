@@ -1,0 +1,17 @@
+B ../_build/default/lib
+B ../_build/default/lib_test
+FLG -w -40
+PKG alcotest
+PKG angstrom
+PKG astring
+PKG bigarray
+PKG bytes
+PKG cmdliner
+PKG fmt
+PKG fmt.cli
+PKG fmt.tty
+PKG result
+PKG stdint
+PKG uchar
+PKG unix
+S ../lib

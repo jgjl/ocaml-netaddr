@@ -13,29 +13,26 @@ let (<) (a) b =
 let (>) a b =
   (Uint32.compare a b) > 0
 
-let of_string s =
-  if (String.length s) >= 16 
-  || (String.length s) <= 6 then
-    None
-  else
-    let elements = Array.of_list (String.split_on_char '.' s) in
-    if Array.length elements = 4 then
-      Uint32.(
-        try
-          let max_byte = of_int 255 in
-          let b3 = of_string elements.(3) in
-          let b2 = of_string elements.(2) in
-          let b1 = of_string elements.(1) in
-          let b0 = of_string elements.(0) in
-          if b0 <= max_byte && b1 <= max_byte && b2 <= max_byte && b3 <= max_byte then
-            Some (logor b3 (logor (shift_left b2 8) (logor (shift_left b1 16) (shift_left b0 24))))
-          else
-            None
-        with 
-        | uint32_of_string -> None
-      )
-    else
-      None
+let strings_to_value byte_list =
+  (*
+  let shift_list = [24;16;8;0] in
+  List.fold_left2 (fun acc shiftwidth bytevalue -> 
+                    Uint32.(logor acc (shift_left (of_int bytevalue) shiftwidth))
+                    )
+                  Uint32.zero shift_list byte_list
+  *)
+  match byte_list with
+  | b1 :: b2 :: b3 :: b4 :: empty -> 
+    Uint32.(logor (of_int b4) 
+           (logor (shift_left (of_int b3) 8) 
+           (logor (shift_left (of_int b2) 16) 
+                  (shift_left (of_int b1) 24))))
+  | _ -> raise (Address.Parser_error "Parser failed")
+
+let of_string s : t option =
+  match Angstrom.parse_string Parser.parser_ipv4 s with
+  | Result.Ok result -> Some (strings_to_value result)
+  | _ -> None
 
 let to_string netaddr =
   Uint32.(
