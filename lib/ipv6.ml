@@ -3,11 +3,21 @@ open Stdint
 
 type t = uint128
 
+type format =
+    | Ipv6Short
+    | Ipv6Long
+    | Ipv6Full
+
+let shift_list = [112;96;80;64;48;32;16;0]
+
 type cur_streak = { cur_streak_start : int; cur_streak_len : int}
 type max_streak = { max_streak_start : int; max_streak_len : int}
 type streak = { streak_start : int; streak_len : int}
 
-let shift_list = [112;96;80;64;48;32;16;0]
+
+let one = Uint128.one
+
+let mask_16lsb = Uint128.of_string "0xffff"
 
 let max_streak_of_cur_streak cur_streak =
   {max_streak_start = cur_streak.cur_streak_start; 
@@ -20,10 +30,6 @@ let streak_of_cur_streak cur_streak =
 let streak_of_max_streak max_streak =
   {streak_start = max_streak.max_streak_start; 
    streak_len = max_streak.max_streak_len}
-
-let one = Uint128.one
-
-let mask_16lsb = Uint128.of_string "0xffff"
 
 let (<) (a) b =
   (Uint128.compare a b) < 0
@@ -70,7 +76,7 @@ let find_first_longest_streak element_selector element_list =
       None
   )
 
-let strings_to_value list =
+let ints_to_value list : t =
   List.fold_left (fun a e -> 
                     Uint128.(
                       logor (shift_left a 16) (of_int e)
@@ -81,15 +87,23 @@ let of_string s =
     None
   else
     match Angstrom.parse_string Netaddress__Parser.parser_ipv6 s with
-    | Result.Ok result -> Some (strings_to_value result)
-    | _ -> None
+    | Result.Ok (Netaddress__Parser.ParsedIPv6Complete result) -> Some (ints_to_value result)
+    | Result.Error _ -> None
+    | Result.Ok (Netaddress__Parser.ParsedIpv6TwoParts (part1, part2)) ->
+      Pervasives.(
+        let missing_length = 7 - (List.length part1) - (List.length part2) in
+        print_string ("Missing length: " ^ (string_of_int missing_length) ^ ".\n");
+        if missing_length < 0 then
+          None
+        else 
+          Some (ints_to_value (List.concat [part1; List.init missing_length (fun x -> 0); part2]))
+      )
 
-let to_string netaddr =
-  Uint128.(
-    print_string (" int value: " ^ to_string netaddr ^ "\n");
+let to_string netaddr ?(format=Ipv6Short) =
+    print_string (" int value: " ^ Uint128.to_string netaddr ^ "\n");
     (*let shift_list = [112;96;80;64;48;32;16;0] in*)
     (* Shift and 'and' each 16bit part of the value*)
-    let b16_values = List.map (fun sw -> logand (shift_right netaddr sw) mask_16lsb) shift_list in
+    let b16_values = List.map (fun sw -> Uint128.(logand (shift_right netaddr sw) mask_16lsb)) shift_list in
     (* Find the longest list of conscutive zeros to be replaced by :: in the output *)
     (* Convert value to hex, remove '0x' prefix *)
     let uint_to_hex v = 
@@ -97,38 +111,21 @@ let to_string netaddr =
       let hex_raw_len = String.length hex_raw in
       String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
       in
-    let string_fold_fun = match find_first_longest_streak (fun e -> Uint128.(compare e zero) = 0) b16_values with
+    match find_first_longest_streak (fun e -> Uint128.(compare e zero) = 0) b16_values with
       (* No list of consecutive zeros found, just print every element separated by ':' *)
       | None ->
-        (fun (a,i) v -> match i with
-                        | 0 -> to_string_hex v, Pervasives.(succ i)
-                        | n -> a ^ (to_string_hex v), Pervasives.(succ i)
-        )
+        String.concat ":" (List.map uint_to_hex b16_values)
       (* List of consecutive zeros found, replace it by '::', print every element separated 
           by ':' elsewhere *)
       | Some streak -> 
-        Pervasives.(
-          print_string ("\n Streak start: " ^ (string_of_int streak.streak_start) ^ "\n");
-          print_string (" Streak length: " ^ (string_of_int streak.streak_len) ^ "\n");
-          (fun (a,i) v -> if (i = 0 && streak.streak_start = 0) || 
-                            (streak.streak_start < i && (streak.streak_start+streak.streak_len-1) > i) then
-                            a, succ i
-                          else if (streak.streak_start < i) && (streak.streak_start+streak.streak_len-1) = i then
-                            begin
-                              print_string ("Hallo i=" ^ Pervasives.string_of_int i ^ "\n");
-                              if i = 7 && v = zero then
-                                (a ^ "::"), succ i
-                              else
-                                (a ^ "::" ^ uint_to_hex v), succ i
-                            end
-                          else
-                            (a ^ ":" ^ uint_to_hex v), succ i
-          )
-        ) in
-    match List.fold_left string_fold_fun ("", 0) b16_values with
-    | address_string, 8 -> address_string
-    | _, i -> raise (Address.Parser_error ("Did not get 8 elements but " ^ string_of_int i))
-    )
+        print_string ("\n Streak start: " ^ (string_of_int streak.streak_start) ^ "\n");
+        print_string (" Streak length: " ^ (string_of_int streak.streak_len) ^ "\n");
+        let value_array = Array.of_list (List.map uint_to_hex b16_values) in
+        let part2_start = streak.streak_start+streak.streak_len in
+        let part2_len = (Array.length value_array) - part2_start in
+        let part1 = Array.to_list (Array.sub value_array 0 streak.streak_start) in
+        let part2 = Array.to_list (Array.sub value_array part2_start part2_len) in
+        String.concat ":" part1 ^ "::" ^ String.concat ":" part2
 
 let add netaddr summand =
   Uint128.(

@@ -2,6 +2,12 @@
 open Stdint
 open Angstrom
 
+type parsed_ipv4 = int list
+
+type parsed_ipv6 =
+    | ParsedIPv6Complete of int list
+    | ParsedIpv6TwoParts of int list * int list
+
 let is_dot =
     function | '.' -> true | _ -> false
 
@@ -108,18 +114,39 @@ let parse_ipv4 ipv4_string =
     | Result.Error message -> message
 
 let read_16bit =
-    scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 4 then
-                            Some (pos + 1)
-                        else
-                            None) 
+    lift2 (fun f r -> (String.make 1 f) ^ r)
+        (satisfy is_all_hexdigits)
+        (
+        scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 3 then
+                                Some (pos + 1)
+                            else
+                                None) 
+        )
 
 let parser_ipv6 = 
-    lift3 (fun s m e -> (List.map int_of_string (List.concat [[s];m;[e]])))
-        (read_16bit <* (skip is_colon))
-        (many (read_16bit <* (skip is_colon)))
+    lift2 (fun m e -> ParsedIPv6Complete (List.map int_of_string (List.concat [m;[e]])))
+        (count 7 (read_16bit <* (skip is_colon)))
         (read_16bit <* end_of_input)
+    <|>
+    lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_string m), (List.map int_of_string e)) )
+        ((many1 (read_16bit <* (skip is_colon))))
+        ((many ((skip is_colon) *> read_16bit)) <* end_of_input)
+    <|>
+    lift2 (fun m e -> ParsedIpv6TwoParts ([], (List.map int_of_string e)) )
+        (satisfy is_colon)
+        ((many1 ((skip is_colon) *> read_16bit)) <* end_of_input)
+    <|>
+    lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_string m), []) )
+        ((many1 (read_16bit <* (skip is_colon))))
+        ((satisfy is_colon) <* end_of_input)
+    <|>
+    lift (fun m -> ParsedIpv6TwoParts ([], []) )
+        ((satisfy is_colon) <* (satisfy is_colon) <* end_of_input)
 
 let parse_ipv6 ipv6_string =
     match parse_string parser_ipv6 ipv6_string with
-    | Result.Ok result -> String.concat "-:-" (List.map string_of_int result)
+    | Result.Ok (ParsedIPv6Complete result) -> String.concat "-:-" (List.map string_of_int result)
+    | Result.Ok ParsedIpv6TwoParts (result1, result2) -> 
+        String.concat "-:-" (List.map string_of_int result1) ^ "::" ^
+        String.concat "-:-" (List.map string_of_int result2)
     | Result.Error message -> "ERROR: " ^ message
