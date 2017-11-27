@@ -76,9 +76,13 @@ let find_first_longest_streak element_selector element_list =
       None
   )
 
-let ints_to_value list : t =
+let ints_to_value list =
+  (*assert (List.length list = 8);*)
+  let stringsis = (List.map string_of_int list) in
+  print_string (" Int: " ^ (String.concat ":" stringsis) ^ "\n");
   List.fold_left (fun a e -> 
                     Uint128.(
+                      (*shift_left (logor a (of_int e)) 16*)
                       logor (shift_left a 16) (of_int e)
                     )) Uint128.zero list
 
@@ -91,12 +95,15 @@ let of_string s =
     | Result.Error _ -> None
     | Result.Ok (Netaddress__Parser.ParsedIpv6TwoParts (part1, part2)) ->
       Pervasives.(
-        let missing_length = 7 - (List.length part1) - (List.length part2) in
+        print_string (" len(part1) = " ^ (string_of_int (List.length part1)) ^ " len(part2) = " ^ (string_of_int (List.length part2)) ^ ".\n");
+        let missing_length = 8 - ((List.length part1) + (List.length part2)) in
         print_string ("Missing length: " ^ (string_of_int missing_length) ^ ".\n");
-        if missing_length < 0 then
+        if missing_length < 1 then
           None
         else 
-          Some (ints_to_value (List.concat [part1; List.init missing_length (fun x -> 0); part2]))
+          let complete_int_list = (List.concat [part1; List.init missing_length (fun x -> 0); part2]) in
+          print_string ("Complete int list: " ^ (String.concat ":" (List.map string_of_int complete_int_list)) ^ ".\n");
+          Some (ints_to_value complete_int_list)
       )
 
 let to_string netaddr ?(format=Ipv6Short) =

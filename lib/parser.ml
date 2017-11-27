@@ -123,20 +123,23 @@ let read_16bit =
                                 None) 
         )
 
+let int_of_hex_string s =
+    int_of_string ("0x" ^ s)
+
 let parser_ipv6 = 
-    lift2 (fun m e -> ParsedIPv6Complete (List.map int_of_string (List.concat [m;[e]])))
+    lift2 (fun m e -> ParsedIPv6Complete (List.map int_of_hex_string (List.concat [m;[e]])))
         (count 7 (read_16bit <* (skip is_colon)))
         (read_16bit <* end_of_input)
     <|>
-    lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_string m), (List.map int_of_string e)) )
+    lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), (List.map int_of_hex_string e)) )
         ((many1 (read_16bit <* (skip is_colon))))
         ((many ((skip is_colon) *> read_16bit)) <* end_of_input)
     <|>
-    lift2 (fun m e -> ParsedIpv6TwoParts ([], (List.map int_of_string e)) )
+    lift2 (fun m e -> ParsedIpv6TwoParts ([], (List.map int_of_hex_string e)) )
         (satisfy is_colon)
         ((many1 ((skip is_colon) *> read_16bit)) <* end_of_input)
     <|>
-    lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_string m), []) )
+    lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), []) )
         ((many1 (read_16bit <* (skip is_colon))))
         ((satisfy is_colon) <* end_of_input)
     <|>
