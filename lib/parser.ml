@@ -2,7 +2,7 @@
 open Stdint
 open Angstrom
 
-type parsed_ipv4 = int list
+type parsed_ipv4 = int * int * int * int
 
 type parsed_ipv6 =
     | ParsedIPv6Complete of int list
@@ -35,6 +35,9 @@ let is_two =
 
 let is_five = 
     function | '5' -> true | _ -> false
+
+let is_f = 
+    function | 'f' -> true | _ -> false
 
 let is_two2four = 
     function | '0' .. '4' -> true | _ -> false
@@ -102,7 +105,7 @@ let testbyte =
 let stringbytes_to_list b1 b2 b3 b4 =
     [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
 
-let parser_ipv4 = (lift4 stringbytes_to_list
+let parser_ipv4 = (lift4 (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
     (testbyte <* (skip is_dot))  
     (testbyte <* (skip is_dot)) 
     (testbyte <* (skip is_dot)) 
@@ -110,7 +113,7 @@ let parser_ipv4 = (lift4 stringbytes_to_list
 
 let parse_ipv4 ipv4_string =
     match parse_string parser_ipv4 ipv4_string with
-    | Result.Ok result -> String.concat "." (List.map string_of_int result) 
+    | Result.Ok (b1,b2,b3,b4) -> (string_of_int b1) ^ "." ^ string_of_int b2 ^ "." ^ string_of_int b3 ^ "." ^ string_of_int b4
     | Result.Error message -> message
 
 let read_16bit =
@@ -126,6 +129,13 @@ let read_16bit =
 let int_of_hex_string s =
     int_of_string ("0x" ^ s)
 
+
+let merge_ffff_dq m (b1, b2, b3, b4) =
+    let second_last = (b1 lsl 8) lor b2 in
+    let last = (b3 lsl 8) lor b4 in
+    let part2 = [int_of_hex_string m; second_last; last] in
+    ParsedIpv6TwoParts ([], part2)
+
 let parser_ipv6 = 
     lift2 (fun m e -> ParsedIPv6Complete (List.map int_of_hex_string (List.concat [m;[e]])))
         (count 7 (read_16bit <* (skip is_colon)))
@@ -134,6 +144,11 @@ let parser_ipv6 =
     lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), (List.map int_of_hex_string e)) )
         ((many1 (read_16bit <* (skip is_colon))))
         ((many ((skip is_colon) *> read_16bit)) <* end_of_input)
+    <|>
+    (* Embedded IPv4 addresses *)
+    lift2 merge_ffff_dq
+        ((satisfy is_colon) *> (skip is_colon) *> (string_ci "ffff"))
+        ((skip is_colon) *> parser_ipv4)
     <|>
     lift2 (fun m e -> ParsedIpv6TwoParts ([], (List.map int_of_hex_string e)) )
         (satisfy is_colon)

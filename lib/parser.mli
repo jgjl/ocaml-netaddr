@@ -1,6 +1,6 @@
 
 
-type parsed_ipv4 = int list
+type parsed_ipv4 = int * int * int * int
 (*
  * Get a parser for IPv4 dotted quad notation
  *)

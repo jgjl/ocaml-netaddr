@@ -13,7 +13,7 @@ let (<) (a) b =
 let (>) a b =
   (Uint32.compare a b) > 0
 
-let strings_to_value byte_list =
+let strings_to_value (b1, b2, b3, b4) =
   (*
   let shift_list = [24;16;8;0] in
   List.fold_left2 (fun acc shiftwidth bytevalue -> 
@@ -21,13 +21,10 @@ let strings_to_value byte_list =
                     )
                   Uint32.zero shift_list byte_list
   *)
-  match byte_list with
-  | b1 :: b2 :: b3 :: b4 :: empty -> 
-    Uint32.(logor (of_int b4) 
-           (logor (shift_left (of_int b3) 8) 
-           (logor (shift_left (of_int b2) 16) 
-                  (shift_left (of_int b1) 24))))
-  | _ -> raise (Address.Parser_error "Parser failed")
+  Uint32.(logor (of_int b4) 
+          (logor (shift_left (of_int b3) 8) 
+          (logor (shift_left (of_int b2) 16) 
+                (shift_left (of_int b1) 24))))
 
 let of_string s : t option =
   if (String.length s) >= 16 

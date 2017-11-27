@@ -18,6 +18,7 @@ let test_str2netaddr_sameinout () =
     "1:2:3:4:5:6:7:8";
     "1:2:3:4::7:8";
     "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
+    "::ffff:192.168.0.1";
   ] in
   List.iter run_twowaytest_sameinout addr_list
 
@@ -40,6 +41,7 @@ let test_str2netaddr () =
     ("0:0:0:0:0:0:0:0", "::");
     ("0000:0000:0000:0000:0000:0000:0000:0000", "::");
     ("0001:002:03:004::7:8", "1:2:3:4::7:8");
+    ("0000:00:0::ffff:192.168.0.1", "::ffff:192.168.0.1");
   ] in
   List.iter run_twowaytest addr_list
 
