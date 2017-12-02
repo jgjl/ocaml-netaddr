@@ -208,8 +208,10 @@ let parser_ipv6_part =
   lift (fun m -> ParsedIpv6TwoParts ([], []) )
       ((satisfy is_colon) <* (satisfy is_colon) <* end_of_input)
 
+(*
 let parser_ipv6_part_new =
   at_most_split 8 (read_16bit <* (satisfy is_colon)) ((satisfy is_colon) *> read_16bit)
+  *)
 
 let parser_ipv6 = 
   parser_ipv6_part <* end_of_input
@@ -223,6 +225,7 @@ let parse_ipv6 ipv6_string =
   | Result.Error message -> "ERROR: " ^ message
 
 
+(*
 let parser_ipv6_new = 
   parser_ipv6_part_new <* end_of_input
 
@@ -230,3 +233,5 @@ let parse_ipv6_new ipv6_string =
   match parse_string parser_ipv6_new ipv6_string with
   | Result.Ok result -> String.concat "-:-" result
   | Result.Error message -> "ERROR: " ^ message
+
+  *)
