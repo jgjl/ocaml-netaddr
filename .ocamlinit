@@ -1,9 +1,8 @@
 #require "stdint";;
 #require "angstrom";;
 #directory "_build/default/lib";;
-#load "Netaddress__Address.cmo";;
-#load "Netaddress__Ipv4.cmo";;
-#load "Netaddress__Ipv6.cmo";;
-#load "Netaddress__Parser.cmo";;
-#load "Netaddress.cmo";;
-open Netaddress;;
+#load "netaddress__Address.cmo";;
+#load "netaddress__Ipv4.cmo";;
+#load "netaddress__Ipv6.cmo";;
+#load "netaddress__Parser.cmo";;
+#load "netaddress.cmo";;

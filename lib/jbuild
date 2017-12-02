@@ -1,8 +1,8 @@
 (jbuild_version 1)
 (library
  (
-   (name        Netaddress)
-   (public_name Netaddress)
+   (name        netaddress)
+   (public_name netaddress)
    (libraries   (stdint angstrom))
    (modules     (address ipv4 ipv6 parser))
  )

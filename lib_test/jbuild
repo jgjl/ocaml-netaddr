@@ -1,8 +1,7 @@
 (jbuild_version 1)
 (executables
  ((names (test))
-  (libraries (
-    alcotest Netaddress))))
+  (libraries (alcotest netaddress))))
 
 (alias
  ((name    runtest)

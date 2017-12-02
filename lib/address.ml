@@ -2,6 +2,42 @@
 exception Result_out_of_range of string
 exception Parser_error of string
 
+type nwaddress =
+  | NoAddress
+
+module type Address = sig
+  type t
+
+  val one : t
+  val ( < ) : t -> t -> bool
+  val ( > ) : t -> t -> bool
+  val of_string : string -> t option
+  val to_string : t -> string
+  val add_int : t -> int -> t
+  val sub_int : t -> int -> t
+  val add : t -> t -> t
+  val sub : t -> t -> t
+end
+
+module Range (A:Address) = struct
+  type t = {first: A.t; last: A.t; count: int}
+
+  let of_string range_string =
+    Some {first= A.one; last=A.one; count=0}
+
+  let to_string range =
+    "1.2.3.4-2.3.4.5"
+end
+
+module Network (A:Address) = struct
+  type t = {address: A.t; last: A.t; prefix: int}
+
+  let of_string network_string =
+    Some {address= A.one; last=A.one; prefix=0}
+
+  let to_string network =
+    "1.2.3.4/24"
+end
 
 (*
 module type Address = sig

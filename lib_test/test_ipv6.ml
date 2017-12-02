@@ -1,9 +1,9 @@
 
 let test_str2netaddr_sameinout () =
   let run_twowaytest_sameinout addr_str =
-    let netaddrv6_opt = Netaddress.Ipv6.of_string addr_str in
+    let netaddrv6_opt = Netaddress.Ipv6.Address.of_string addr_str in
     let stringv6 = match netaddrv6_opt with
-      | Some netaddrv6 -> Netaddress.Ipv6.to_string ~format:Netaddress.Ipv6.Ipv6Short netaddrv6
+      | Some netaddrv6 -> Netaddress.Ipv6.Address.to_string ~out_format:Netaddress.Ipv6.Ipv6Short netaddrv6
       | None -> "" 
     in
     Alcotest.(check string) ("Conversion of " ^ addr_str ^ " from and to netaddr -" ^ stringv6 ^ "-.") addr_str stringv6
@@ -13,6 +13,8 @@ let test_str2netaddr_sameinout () =
     "2003::";
     "2003:1001::";
     "::1";
+    "::1:2:3:4";
+    "::1:2:3:4:5";
     "ffdb::1";
     "2004::4";
     "1:2:3:4:5:6:7:8";
@@ -24,9 +26,9 @@ let test_str2netaddr_sameinout () =
 
 let test_str2netaddr () =
   let run_twowaytest (addr_str_in, addr_str_out) =
-    let netaddrv6_opt = Netaddress.Ipv6.of_string addr_str_in in
+    let netaddrv6_opt = Netaddress.Ipv6.Address.of_string addr_str_in in
     let stringv6 = match netaddrv6_opt with
-      | Some netaddrv6 -> Netaddress.Ipv6.to_string ~format:Netaddress.Ipv6.Ipv6Short netaddrv6
+      | Some netaddrv6 -> Netaddress.Ipv6.Address.to_string ~out_format:Netaddress.Ipv6.Ipv6Short netaddrv6
       | None -> "" 
     in
     Alcotest.(check string) ("Conversion of " ^ addr_str_in ^ " from and to netaddr " ^ addr_str_out ^ "-.") addr_str_out stringv6

@@ -102,14 +102,56 @@ let testbyte =
             read_byte_1digits_X;
             ]) <* end_of_string
 
+
+let rec at_most m p =
+  (*
+    Contributed by seliopou
+    https://github.com/inhabitedtype/angstrom/issues/110
+  *)
+  if m = 0
+  then return []
+  else
+    (lift2 (fun x xs -> x :: xs) p (at_most (m - 1) p))
+    <|> return []
+
+let rec at_most_split m pf pr =
+  (*
+    m = max. count
+    pf = first part to match
+    pr = rest part to match
+  *)
+  if m = 0
+  then return []
+  else
+    (lift2 (fun x xs -> x :: xs) 
+        pf 
+        (at_most_split (m - 1) pf pr))
+    <|>
+    (lift2 (fun x xs -> x :: xs) 
+        pr 
+        (at_most_split (m - 2) pr pr))
+    <|> return []
+
+let limits n m p =
+  (*
+    Contributed by seliopou
+    https://github.com/inhabitedtype/angstrom/issues/110
+  *)
+  lift2 (fun xs ys -> xs @ ys)
+    (count   n p)
+    (at_most m p)
+
 let stringbytes_to_list b1 b2 b3 b4 =
     [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
 
-let parser_ipv4 = (lift4 (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
+let parser_ipv4_part = (lift4 (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
     (testbyte <* (skip is_dot))  
     (testbyte <* (skip is_dot)) 
     (testbyte <* (skip is_dot)) 
-    (testbyte <* end_of_input)) 
+    testbyte)
+
+let parser_ipv4 = 
+  parser_ipv4_part <* end_of_input
 
 let parse_ipv4 ipv4_string =
     match parse_string parser_ipv4 ipv4_string with
@@ -136,35 +178,55 @@ let merge_ffff_dq m (b1, b2, b3, b4) =
     let part2 = [int_of_hex_string m; second_last; last] in
     ParsedIpv6TwoParts ([], part2)
 
+let parser_ipv6_part = 
+  (* All 8 16bit fields *)
+  lift2 (fun m e -> ParsedIPv6Complete (List.map int_of_hex_string (List.concat [m;[e]])))
+      (count 7 (read_16bit <* (skip is_colon)))
+      (read_16bit <* end_of_input)
+  <|>
+  (* (XXXX:)+ (:XXXX)+ *)
+  lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), (List.map int_of_hex_string e)) )
+      ((limits 1 6 (read_16bit <* (skip is_colon))))
+      ((limits 1 6 ((skip is_colon) *> read_16bit)) <* end_of_input)
+  <|>
+  (* Embedded IPv4 addresses *)
+  lift2 merge_ffff_dq
+      ((satisfy is_colon) *> (skip is_colon) *> (string_ci "ffff"))
+      ((skip is_colon) *> parser_ipv4_part)
+  <|>
+  (* : (:XXXX)+ *)
+  lift2 (fun m e -> ParsedIpv6TwoParts ([], (List.map int_of_hex_string e)) )
+      (satisfy is_colon)
+      ((many1 ((skip is_colon) *> read_16bit)) <* end_of_input)
+  <|>
+  (* (XXXX:)+ : *)
+  lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), []) )
+      ((many1 (read_16bit <* (skip is_colon))))
+      ((satisfy is_colon) <* end_of_input)
+  <|>
+  (* :: *)
+  lift (fun m -> ParsedIpv6TwoParts ([], []) )
+      ((satisfy is_colon) <* (satisfy is_colon) <* end_of_input)
+
+let parser_ipv6_part_new =
+  at_most_split 8 (read_16bit <* (satisfy is_colon)) ((satisfy is_colon) *> read_16bit)
+
 let parser_ipv6 = 
-    lift2 (fun m e -> ParsedIPv6Complete (List.map int_of_hex_string (List.concat [m;[e]])))
-        (count 7 (read_16bit <* (skip is_colon)))
-        (read_16bit <* end_of_input)
-    <|>
-    lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), (List.map int_of_hex_string e)) )
-        ((many1 (read_16bit <* (skip is_colon))))
-        ((many ((skip is_colon) *> read_16bit)) <* end_of_input)
-    <|>
-    (* Embedded IPv4 addresses *)
-    lift2 merge_ffff_dq
-        ((satisfy is_colon) *> (skip is_colon) *> (string_ci "ffff"))
-        ((skip is_colon) *> parser_ipv4)
-    <|>
-    lift2 (fun m e -> ParsedIpv6TwoParts ([], (List.map int_of_hex_string e)) )
-        (satisfy is_colon)
-        ((many1 ((skip is_colon) *> read_16bit)) <* end_of_input)
-    <|>
-    lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), []) )
-        ((many1 (read_16bit <* (skip is_colon))))
-        ((satisfy is_colon) <* end_of_input)
-    <|>
-    lift (fun m -> ParsedIpv6TwoParts ([], []) )
-        ((satisfy is_colon) <* (satisfy is_colon) <* end_of_input)
+  parser_ipv6_part <* end_of_input
 
 let parse_ipv6 ipv6_string =
-    match parse_string parser_ipv6 ipv6_string with
-    | Result.Ok (ParsedIPv6Complete result) -> String.concat "-:-" (List.map string_of_int result)
-    | Result.Ok ParsedIpv6TwoParts (result1, result2) -> 
-        String.concat "-:-" (List.map string_of_int result1) ^ "::" ^
-        String.concat "-:-" (List.map string_of_int result2)
-    | Result.Error message -> "ERROR: " ^ message
+  match parse_string parser_ipv6 ipv6_string with
+  | Result.Ok (ParsedIPv6Complete result) -> String.concat "-:-" (List.map string_of_int result)
+  | Result.Ok ParsedIpv6TwoParts (result1, result2) -> 
+      String.concat "-:-" (List.map string_of_int result1) ^ "::" ^
+      String.concat "-:-" (List.map string_of_int result2)
+  | Result.Error message -> "ERROR: " ^ message
+
+
+let parser_ipv6_new = 
+  parser_ipv6_part_new <* end_of_input
+
+let parse_ipv6_new ipv6_string =
+  match parse_string parser_ipv6_new ipv6_string with
+  | Result.Ok result -> String.concat "-:-" result
+  | Result.Error message -> "ERROR: " ^ message

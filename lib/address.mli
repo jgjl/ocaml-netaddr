@@ -19,23 +19,28 @@
 exception Result_out_of_range of string
 exception Parser_error of string
 
+type nwaddress =
+  | NoAddress
 (*
 type ipaddress =
   | IPv4Address of t
   | IPv6Address of b
 *)
-(*
-type t
 
-val one : t
-val ( < ) : t -> t -> bool
-val ( > ) : t -> t -> bool
-val of_string : string -> t option
-val to_string : t -> string
-val add_int : t -> int -> t
-val sub_int : t -> int -> t
-val add : t -> t -> t
-val sub : t -> t -> t
+(*
+module type Address = sig
+  type t
+
+  val one : t
+  val ( < ) : t -> t -> bool
+  val ( > ) : t -> t -> bool
+  val of_string : string -> t option
+  val to_string : t -> string
+  val add_int : t -> int -> t
+  val sub_int : t -> int -> t
+  val add : t -> t -> t
+  val sub : t -> t -> t
+end
 *)
 
 (*
