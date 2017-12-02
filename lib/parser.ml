@@ -19,9 +19,7 @@ let is_all_digits =
 
 let is_all_hexdigits = 
     function 
-    | '0' .. '9' -> true 
-    | 'a' .. 'f' -> true 
-    | 'A' .. 'F' -> true 
+    | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true 
     | _ -> false
 
 let is_zero = 
@@ -100,7 +98,7 @@ let testbyte =
             read_byte_3digits_0XX;
             read_byte_2digits_XX;
             read_byte_1digits_X;
-            ]) <* end_of_string
+            ]) 
 
 
 let rec at_most m p =
@@ -114,22 +112,22 @@ let rec at_most m p =
     (lift2 (fun x xs -> x :: xs) p (at_most (m - 1) p))
     <|> return []
 
-let rec at_most_split m pf pr =
+let rec at_most_split c m pf pr s f =
   (*
     m = max. count
     pf = first part to match
     pr = rest part to match
   *)
-  if m = 0
-  then return []
-  else
-    (lift2 (fun x xs -> x :: xs) 
-        pf 
-        (at_most_split (m - 1) pf pr))
+  if c = m then 
+    return []
+  else if c = 0 then
+    (lift2 (fun x xs -> x :: xs) pf (at_most_split (c+1) m pf pr s f))
     <|>
-    (lift2 (fun x xs -> x :: xs) 
-        pr 
-        (at_most_split (m - 2) pr pr))
+    (lift2 (fun x xs -> x :: xs) f (at_most (m-c+1) pr))
+  else 
+    (lift2 (fun x xs -> x :: xs) pf (at_most_split (c+1) m pf pr s f))
+    <|>
+    (lift2 (fun x xs -> x :: xs) s (at_most (m-c+1) pr))
     <|> return []
 
 let limits n m p =
@@ -161,12 +159,69 @@ let parse_ipv4 ipv4_string =
 let read_16bit =
     lift2 (fun f r -> (String.make 1 f) ^ r)
         (satisfy is_all_hexdigits)
-        (
-        scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 3 then
-                                Some (pos + 1)
+        (scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 3 then
+                              Some (pos + 1)
                             else
-                                None) 
-        )
+                              None))
+
+type read_byte_state =
+| RBS_Any
+| RBS_25X
+| RBS_24X
+| RBS_2XX
+| RBS_1XX
+| RBS_0_1XX
+| RBS_55
+| RBS_XX
+| RBS_X
+| RBS_5
+| RBS_End
+
+let read_byte =
+  (scan_string (RBS_Any, 0) 
+    (fun (state, pos) c -> 
+        match pos, state with
+        | 0, RBS_Any ->
+        begin
+          match c with
+          | '0' .. '1' -> Some (RBS_XX, pos + 1)
+          | '2' -> Some (RBS_2XX, pos + 1)
+          | '3' .. '9' -> Some (RBS_X, pos + 1)
+          | _ -> None
+        end
+        | 1, RBS_2XX ->
+        begin
+          match c with
+          | '0' .. '4' -> Some (RBS_X, pos + 1)
+          | '5' -> Some (RBS_5, pos + 1)
+          | _ -> None
+        end
+        | 1, RBS_XX ->
+        begin
+          match c with
+          | '0' .. '9' -> Some (RBS_X, pos + 1)
+          | _ -> None
+        end
+        | 1, RBS_X ->
+        begin
+          match c with
+          | '0' .. '9' -> Some (RBS_End, pos + 1)
+          | _ -> None
+        end
+        | 2, RBS_X ->
+        begin
+          match c with
+          | '0' .. '9' -> Some (RBS_End, pos + 1)
+          | _ -> None
+        end
+        | 2, RBS_5 ->
+        begin
+          match c with
+          | '0' .. '5' -> Some (RBS_End, pos + 1)
+          | _ -> None
+        end
+        | _, _ -> None
+        ))
 
 let int_of_hex_string s =
     int_of_string ("0x" ^ s)
@@ -208,10 +263,11 @@ let parser_ipv6_part =
   lift (fun m -> ParsedIpv6TwoParts ([], []) )
       ((satisfy is_colon) <* (satisfy is_colon) <* end_of_input)
 
-(*
 let parser_ipv6_part_new =
-  at_most_split 8 (read_16bit <* (satisfy is_colon)) ((satisfy is_colon) *> read_16bit)
-  *)
+  at_most_split 0 8 (read_16bit <* (satisfy is_colon)) 
+                  ((satisfy is_colon) *> read_16bit) 
+                  (read_16bit <|> (peek_string 1 >>= function | ":" -> return "" | s -> fail s ))
+                  (string ":")
 
 let parser_ipv6 = 
   parser_ipv6_part <* end_of_input
@@ -225,7 +281,6 @@ let parse_ipv6 ipv6_string =
   | Result.Error message -> "ERROR: " ^ message
 
 
-(*
 let parser_ipv6_new = 
   parser_ipv6_part_new <* end_of_input
 
@@ -233,5 +288,3 @@ let parse_ipv6_new ipv6_string =
   match parse_string parser_ipv6_new ipv6_string with
   | Result.Ok result -> String.concat "-:-" result
   | Result.Error message -> "ERROR: " ^ message
-
-  *)

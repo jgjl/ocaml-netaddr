@@ -23,3 +23,4 @@ val parser_ipv6 : parsed_ipv6 Angstrom.t
  * Apply the parser to the input string and return the result as a string
  *)
 val parse_ipv6 : string -> string
+val parse_ipv6_new : string -> string
