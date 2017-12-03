@@ -100,6 +100,38 @@ let testbyte =
             read_byte_1digits_X;
             ]) 
 
+type read_byte_state =
+| RBS_start
+| RBS_01
+| RBS_2
+| RBS_39
+| RBS_2_5
+| RBS_r_09
+| RBS_end
+
+let read_byte =
+  (*
+    Design as state machine.
+    Accept is implicitly enabled for all states by the default -> None transition.
+  *)
+  (scan RBS_start 
+    (fun (state) c -> 
+        match state, c with
+        | RBS_start, '0' .. '1' -> Some RBS_01
+        | RBS_start, '2' -> Some RBS_2
+        | RBS_start, '3' .. '9' -> Some RBS_39
+        | RBS_01, '0' .. '9' -> Some RBS_r_09
+        | RBS_r_09, '0' .. '9' -> Some RBS_end
+        | RBS_39, '0' .. '9' -> Some RBS_end
+        | RBS_2, '0' .. '4' -> Some RBS_r_09
+        | RBS_2, '5' -> Some RBS_2_5
+        | RBS_2, '6' .. '9' -> Some RBS_end
+        | RBS_2_5, '0' .. '5' -> Some RBS_end
+        | _, _ -> None
+        )) >>= function 
+                | result, RBS_start -> fail "Could not read byte value"
+                | result, _ -> return result 
+
 
 let rec at_most m p =
   (*
@@ -143,10 +175,10 @@ let stringbytes_to_list b1 b2 b3 b4 =
     [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
 
 let parser_ipv4_part = (lift4 (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
-    (testbyte <* (skip is_dot))  
-    (testbyte <* (skip is_dot)) 
-    (testbyte <* (skip is_dot)) 
-    testbyte)
+    (read_byte <* (skip is_dot))  
+    (read_byte <* (skip is_dot)) 
+    (read_byte <* (skip is_dot)) 
+     read_byte)
 
 let parser_ipv4 = 
   parser_ipv4_part <* end_of_input
@@ -163,65 +195,6 @@ let read_16bit =
                               Some (pos + 1)
                             else
                               None))
-
-type read_byte_state =
-| RBS_Any
-| RBS_25X
-| RBS_24X
-| RBS_2XX
-| RBS_1XX
-| RBS_0_1XX
-| RBS_55
-| RBS_XX
-| RBS_X
-| RBS_5
-| RBS_End
-
-let read_byte =
-  (scan_string (RBS_Any, 0) 
-    (fun (state, pos) c -> 
-        match pos, state with
-        | 0, RBS_Any ->
-        begin
-          match c with
-          | '0' .. '1' -> Some (RBS_XX, pos + 1)
-          | '2' -> Some (RBS_2XX, pos + 1)
-          | '3' .. '9' -> Some (RBS_X, pos + 1)
-          | _ -> None
-        end
-        | 1, RBS_2XX ->
-        begin
-          match c with
-          | '0' .. '4' -> Some (RBS_X, pos + 1)
-          | '5' -> Some (RBS_5, pos + 1)
-          | _ -> None
-        end
-        | 1, RBS_XX ->
-        begin
-          match c with
-          | '0' .. '9' -> Some (RBS_X, pos + 1)
-          | _ -> None
-        end
-        | 1, RBS_X ->
-        begin
-          match c with
-          | '0' .. '9' -> Some (RBS_End, pos + 1)
-          | _ -> None
-        end
-        | 2, RBS_X ->
-        begin
-          match c with
-          | '0' .. '9' -> Some (RBS_End, pos + 1)
-          | _ -> None
-        end
-        | 2, RBS_5 ->
-        begin
-          match c with
-          | '0' .. '5' -> Some (RBS_End, pos + 1)
-          | _ -> None
-        end
-        | _, _ -> None
-        ))
 
 let int_of_hex_string s =
     int_of_string ("0x" ^ s)

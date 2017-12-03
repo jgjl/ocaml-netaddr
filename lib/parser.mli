@@ -1,4 +1,5 @@
 
+val read_byte : string Angstrom.t
 
 type parsed_ipv4 = int * int * int * int
 (*
