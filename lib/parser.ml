@@ -14,34 +14,10 @@ let is_dot =
 let is_colon =
     function | ':' -> true | _ -> false
 
-let is_all_digits = 
-    function | '0' .. '9' -> true | _ -> false
-
 let is_all_hexdigits = 
     function 
     | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true 
     | _ -> false
-
-let is_zero = 
-    function | '0' -> true | _ -> false
-
-let is_one = 
-    function | '1' -> true | _ -> false
-
-let is_two = 
-    function | '2' -> true | _ -> false
-
-let is_five = 
-    function | '5' -> true | _ -> false
-
-let is_f = 
-    function | 'f' -> true | _ -> false
-
-let is_two2four = 
-    function | '0' .. '4' -> true | _ -> false
-
-let is_bytedigit_five = 
-    function | '0' .. '5' -> true | _ -> false
 
 let integer =
     take_while1 (function '0' .. '9' -> true | _ -> false) >>| int_of_string
@@ -54,51 +30,6 @@ let end_of_string =
     >>= function
         | None | Some '.' -> return ()
         | Some c-> fail ("end_of_string, next char: " ^ (String.make 1 c))
-
-let read_block =
-    take_till is_dot 
-
-let read_byte_3digits_25X =
-    lift3 (fun dig1 dig2 dig3 -> (String.make 1 dig1) ^ (String.make 1 dig2) ^ (String.make 1 dig3))
-        (satisfy is_two) 
-        (satisfy is_five) 
-        (satisfy is_bytedigit_five)
-
-let read_byte_3digits_20_4X =
-    lift3 (fun dig1 dig2 dig3 -> (String.make 1 dig1) ^ (String.make 1 dig2) ^ (String.make 1 dig3))
-        (satisfy is_two) 
-        (satisfy is_two2four) 
-        (satisfy is_all_digits)
-
-let read_byte_3digits_1XX =
-    lift3 (fun dig1 dig2 dig3 -> (String.make 1 dig1) ^ (String.make 1 dig2) ^ (String.make 1 dig3))
-        (satisfy is_one) 
-        (satisfy is_all_digits) 
-        (satisfy is_all_digits)
-
-let read_byte_3digits_0XX =
-    lift3 (fun dig1 dig2 dig3 -> (String.make 1 dig1) ^ (String.make 1 dig2) ^ (String.make 1 dig3))
-        (satisfy is_zero) 
-        (satisfy is_all_digits) 
-        (satisfy is_all_digits)
-
-let read_byte_2digits_XX =
-    lift2 (fun dig1 dig2 -> (String.make 1 dig1) ^ (String.make 1 dig2))
-        (satisfy is_all_digits) 
-        (satisfy is_all_digits)
-
-let read_byte_1digits_X =
-    lift (fun dig1 -> String.make 1 dig1)
-        (satisfy is_all_digits)
-
-let testbyte =
-    (choice [read_byte_3digits_25X;
-            read_byte_3digits_20_4X;
-            read_byte_3digits_1XX;
-            read_byte_3digits_0XX;
-            read_byte_2digits_XX;
-            read_byte_1digits_X;
-            ]) 
 
 type read_byte_state =
 | RBS_start
