@@ -4,9 +4,7 @@ open Angstrom
 
 type parsed_ipv4 = int * int * int * int
 
-type parsed_ipv6 =
-    | ParsedIPv6Complete of int list
-    | ParsedIpv6TwoParts of int list * int list
+type parsed_ipv6 = int list * int list
 
 let is_dot =
     function | '.' -> true | _ -> false
@@ -71,7 +69,6 @@ let rec at_most m p =
     Contributed by seliopou
     https://github.com/inhabitedtype/angstrom/issues/110
   *)
-  print_string (" at_most: "^(string_of_int m));
   if m = 0
   then return []
   else
@@ -96,10 +93,7 @@ let rec at_most_split c m pf pr s f =
     f = split part for the first read field
   *)
   if c = m-1 then
-    begin
-      print_string "Ende!!";
       (lift (fun x -> ([x], [])) s)
-    end
   (*
   else if c = m then 
     return ([],[])
@@ -151,12 +145,14 @@ let int_of_hex_string s =
     int_of_string ("0x" ^ s)
 
 
+(*
 let merge_ffff_dq m (b1, b2, b3, b4) =
     let second_last = (b1 lsl 8) lor b2 in
     let last = (b3 lsl 8) lor b4 in
     let part2 = [int_of_hex_string m; second_last; last] in
     ParsedIpv6TwoParts ([], part2)
 
+()
 let parser_ipv6_part = 
   (* All 8 16bit fields *)
   lift2 (fun m e -> ParsedIPv6Complete (List.map int_of_hex_string (List.concat [m;[e]])))
@@ -186,6 +182,7 @@ let parser_ipv6_part =
   (* :: *)
   lift (fun m -> ParsedIpv6TwoParts ([], []) )
       ((satisfy is_colon) <* (satisfy is_colon) <* end_of_input)
+*)
 
 let parser_ipv6_part_new =
   at_most_split 0 8 
@@ -201,10 +198,9 @@ let parser_ipv6 =
   (*
   parser_ipv6_part <* end_of_input
   *)
-  (parser_ipv6_part_new <* end_of_input) 
+  (parser_ipv6_part_new <* end_of_input)
   >>| 
-  (fun (x1, x2) -> 
-    ParsedIpv6TwoParts (List.map int_of_hex_string x1, List.map int_of_hex_string x2))
+  (fun (part1, part2) -> (List.map int_of_hex_string part1, List.map int_of_hex_string part2))
 
 let parser_ipv6_new = 
   parser_ipv6_part_new <* end_of_input
@@ -226,7 +222,9 @@ let parse_ipv6 ipv6_string =
   | Result.Error message -> "ERROR: " ^ message
 
 
+(*
 let parse_ipv6_new ipv6_string =
-  match parse_string parser_ipv6_new ipv6_string with
+  match parse_string parser_ipv6 ipv6_string with
   | Result.Ok (result, r2) -> String.concat "-:-" result ^ "-Middle-" ^ String.concat "-:-" r2
   | Result.Error message -> "ERROR: " ^ message
+  *)
