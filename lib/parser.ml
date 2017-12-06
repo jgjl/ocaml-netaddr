@@ -19,12 +19,6 @@ let is_all_hexdigits =
     | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true 
     | _ -> false
 
-let integer =
-    take_while1 (function '0' .. '9' -> true | _ -> false) >>| int_of_string
-
-let byte =
-    take_while1 (function '0' .. '9' -> true | _ -> false) >>| Uint32.of_string
-
 let end_of_string = 
     peek_char
     >>= function
@@ -63,34 +57,25 @@ let read_byte =
                 | result, RBS_start -> fail "Could not read byte value"
                 | result, _ -> return result 
 
+let read_16bit =
+    lift2 (fun f r -> (String.make 1 f) ^ r)
+        (satisfy is_all_hexdigits)
+        (scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 3 then
+                              Some (pos + 1)
+                            else
+                              None))
+
 
 let rec at_most m p =
   (*
     Contributed by seliopou
     https://github.com/inhabitedtype/angstrom/issues/110
   *)
+  print_string (" at_most: "^(string_of_int m));
   if m = 0
   then return []
   else
     (lift2 (fun x xs -> x :: xs) p (at_most (m - 1) p))
-    <|> return []
-
-let rec at_most_split c m pf pr s f =
-  (*
-    m = max. count
-    pf = first part to match
-    pr = rest part to match
-  *)
-  if c = m then 
-    return []
-  else if c = 0 then
-    (lift2 (fun x xs -> x :: xs) pf (at_most_split (c+1) m pf pr s f))
-    <|>
-    (lift2 (fun x xs -> x :: xs) f (at_most (m-c+1) pr))
-  else 
-    (lift2 (fun x xs -> x :: xs) pf (at_most_split (c+1) m pf pr s f))
-    <|>
-    (lift2 (fun x xs -> x :: xs) s (at_most (m-c+1) pr))
     <|> return []
 
 let limits n m p =
@@ -102,10 +87,53 @@ let limits n m p =
     (count   n p)
     (at_most m p)
 
+let rec at_most_split c m pf pr s f =
+  (*
+    m = max. count
+    pf = first part to match
+    pr = rest part to match
+    s = split part
+    f = split part for the first read field
+  *)
+  if c = m-1 then
+    begin
+      print_string "Ende!!";
+      (lift (fun x -> ([x], [])) s)
+    end
+  (*
+  else if c = m then 
+    return ([],[])
+  *)
+  (* TODO: write FSM, then encode here *)
+  else 
+    (* Parse (XXXX:)* parts *)
+    (lift2 (fun x1 (xs1, xs2) -> (x1 :: xs1, xs2)) pf (at_most_split (c+1) m pf pr s f))
+    <|>
+    (* Parse (:XXXX) parts, special case handling for addresses starting with "::" *)
+    (
+      if c = 0 then (
+        lift2 (fun _ xs2 -> ([], xs2)) f (limits 1 6 pr)
+        <|>
+        (lift2 (fun _ _ -> ([], [])) f f)
+        )
+      else (
+        (*(lift2 (fun x2 xs2 -> ([], x2::xs2)) s (limits 1 (m-c-1) pr))*)
+        (lift (fun xs -> ([], xs)) (limits 1 (m-c-1) pr))
+        <|>
+        (lift (fun _ -> ([], [])) f)
+      )
+    )
+    (*
+    <|> return ([],[])
+    *)
+
+
 let stringbytes_to_list b1 b2 b3 b4 =
     [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
 
-let parser_ipv4_part = (lift4 (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
+let parser_ipv4_part = 
+  (lift4 
+    (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
     (read_byte <* (skip is_dot))  
     (read_byte <* (skip is_dot)) 
     (read_byte <* (skip is_dot)) 
@@ -118,14 +146,6 @@ let parse_ipv4 ipv4_string =
     match parse_string parser_ipv4 ipv4_string with
     | Result.Ok (b1,b2,b3,b4) -> (string_of_int b1) ^ "." ^ string_of_int b2 ^ "." ^ string_of_int b3 ^ "." ^ string_of_int b4
     | Result.Error message -> message
-
-let read_16bit =
-    lift2 (fun f r -> (String.make 1 f) ^ r)
-        (satisfy is_all_hexdigits)
-        (scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 3 then
-                              Some (pos + 1)
-                            else
-                              None))
 
 let int_of_hex_string s =
     int_of_string ("0x" ^ s)
@@ -168,27 +188,45 @@ let parser_ipv6_part =
       ((satisfy is_colon) <* (satisfy is_colon) <* end_of_input)
 
 let parser_ipv6_part_new =
-  at_most_split 0 8 (read_16bit <* (satisfy is_colon)) 
-                  ((satisfy is_colon) *> read_16bit) 
-                  (read_16bit <|> (peek_string 1 >>= function | ":" -> return "" | s -> fail s ))
-                  (string ":")
+  at_most_split 0 8 
+    (read_16bit <* (satisfy is_colon)) 
+    ((satisfy is_colon) *> read_16bit) 
+    read_16bit
+    (*
+    (read_16bit <|> (peek_string 1 >>= function | ":" -> return "" | s -> fail s ))
+    *)
+    (string ":")
 
 let parser_ipv6 = 
+  (*
   parser_ipv6_part <* end_of_input
+  *)
+  (parser_ipv6_part_new <* end_of_input) 
+  >>| 
+  (fun (x1, x2) -> 
+    ParsedIpv6TwoParts (List.map int_of_hex_string x1, List.map int_of_hex_string x2))
+
+let parser_ipv6_new = 
+  parser_ipv6_part_new <* end_of_input
+
 
 let parse_ipv6 ipv6_string =
+  (*
   match parse_string parser_ipv6 ipv6_string with
   | Result.Ok (ParsedIPv6Complete result) -> String.concat "-:-" (List.map string_of_int result)
   | Result.Ok ParsedIpv6TwoParts (result1, result2) -> 
       String.concat "-:-" (List.map string_of_int result1) ^ "::" ^
       String.concat "-:-" (List.map string_of_int result2)
   | Result.Error message -> "ERROR: " ^ message
+  *)
+  match parse_string parser_ipv6_new ipv6_string with
+  | Result.Ok (result1, result2) -> 
+      String.concat "-:-" result1 ^ "::" ^
+      String.concat "-:-" result2
+  | Result.Error message -> "ERROR: " ^ message
 
-
-let parser_ipv6_new = 
-  parser_ipv6_part_new <* end_of_input
 
 let parse_ipv6_new ipv6_string =
   match parse_string parser_ipv6_new ipv6_string with
-  | Result.Ok result -> String.concat "-:-" result
+  | Result.Ok (result, r2) -> String.concat "-:-" result ^ "-Middle-" ^ String.concat "-:-" r2
   | Result.Error message -> "ERROR: " ^ message

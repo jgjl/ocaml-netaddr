@@ -107,8 +107,9 @@ module Address = struct
                 print_string (" len(part1) = " ^ (string_of_int (List.length part1)) ^ " len(part2) = " ^ (string_of_int (List.length part2)) ^ ".\n");
                 let missing_length = 8 - ((List.length part1) + (List.length part2)) in
                 print_string ("Missing length: " ^ (string_of_int missing_length) ^ ".\n");
-                if missing_length < 1 then
-                  None
+                if missing_length = 0 then
+                  (*None*)
+                  Some (ints_to_value (part1 @ part2))
                 else 
                   let complete_int_list = (List.concat [part1; List.init missing_length (fun x -> 0); part2]) in
                   print_string ("Complete int list: " ^ (String.concat ":" (List.map string_of_int complete_int_list)) ^ ".\n");
