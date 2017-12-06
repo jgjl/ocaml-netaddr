@@ -94,11 +94,6 @@ let rec at_most_split c m pf pr s f =
   *)
   if c = m-1 then
       (lift (fun x -> ([x], [])) s)
-  (*
-  else if c = m then 
-    return ([],[])
-  *)
-  (* TODO: write FSM, then encode here *)
   else 
     (* Parse (XXXX:)* parts *)
     (lift2 (fun x1 (xs1, xs2) -> (x1 :: xs1, xs2)) pf (at_most_split (c+1) m pf pr s f))
@@ -117,9 +112,6 @@ let rec at_most_split c m pf pr s f =
         (lift (fun _ -> ([], [])) f)
       )
     )
-    (*
-    <|> return ([],[])
-    *)
 
 
 let stringbytes_to_list b1 b2 b3 b4 =
@@ -145,46 +137,7 @@ let int_of_hex_string s =
     int_of_string ("0x" ^ s)
 
 
-(*
-let merge_ffff_dq m (b1, b2, b3, b4) =
-    let second_last = (b1 lsl 8) lor b2 in
-    let last = (b3 lsl 8) lor b4 in
-    let part2 = [int_of_hex_string m; second_last; last] in
-    ParsedIpv6TwoParts ([], part2)
-
-()
-let parser_ipv6_part = 
-  (* All 8 16bit fields *)
-  lift2 (fun m e -> ParsedIPv6Complete (List.map int_of_hex_string (List.concat [m;[e]])))
-      (count 7 (read_16bit <* (skip is_colon)))
-      (read_16bit <* end_of_input)
-  <|>
-  (* (XXXX:)+ (:XXXX)+ *)
-  lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), (List.map int_of_hex_string e)) )
-      ((limits 1 6 (read_16bit <* (skip is_colon))))
-      ((limits 1 6 ((skip is_colon) *> read_16bit)) <* end_of_input)
-  <|>
-  (* Embedded IPv4 addresses *)
-  lift2 merge_ffff_dq
-      ((satisfy is_colon) *> (skip is_colon) *> (string_ci "ffff"))
-      ((skip is_colon) *> parser_ipv4_part)
-  <|>
-  (* : (:XXXX)+ *)
-  lift2 (fun m e -> ParsedIpv6TwoParts ([], (List.map int_of_hex_string e)) )
-      (satisfy is_colon)
-      ((many1 ((skip is_colon) *> read_16bit)) <* end_of_input)
-  <|>
-  (* (XXXX:)+ : *)
-  lift2 (fun m e -> ParsedIpv6TwoParts ((List.map int_of_hex_string m), []) )
-      ((many1 (read_16bit <* (skip is_colon))))
-      ((satisfy is_colon) <* end_of_input)
-  <|>
-  (* :: *)
-  lift (fun m -> ParsedIpv6TwoParts ([], []) )
-      ((satisfy is_colon) <* (satisfy is_colon) <* end_of_input)
-*)
-
-let parser_ipv6_part_new =
+let parser_ipv6_part =
   at_most_split 0 8 
     (read_16bit <* (satisfy is_colon)) 
     ((satisfy is_colon) *> read_16bit) 
@@ -198,33 +151,15 @@ let parser_ipv6 =
   (*
   parser_ipv6_part <* end_of_input
   *)
-  (parser_ipv6_part_new <* end_of_input)
+  (parser_ipv6_part <* end_of_input)
   >>| 
   (fun (part1, part2) -> (List.map int_of_hex_string part1, List.map int_of_hex_string part2))
 
-let parser_ipv6_new = 
-  parser_ipv6_part_new <* end_of_input
-
 
 let parse_ipv6 ipv6_string =
-  (*
   match parse_string parser_ipv6 ipv6_string with
-  | Result.Ok (ParsedIPv6Complete result) -> String.concat "-:-" (List.map string_of_int result)
-  | Result.Ok ParsedIpv6TwoParts (result1, result2) -> 
+  | Result.Ok (result1, result2) -> 
       String.concat "-:-" (List.map string_of_int result1) ^ "::" ^
       String.concat "-:-" (List.map string_of_int result2)
   | Result.Error message -> "ERROR: " ^ message
-  *)
-  match parse_string parser_ipv6_new ipv6_string with
-  | Result.Ok (result1, result2) -> 
-      String.concat "-:-" result1 ^ "::" ^
-      String.concat "-:-" result2
-  | Result.Error message -> "ERROR: " ^ message
 
-
-(*
-let parse_ipv6_new ipv6_string =
-  match parse_string parser_ipv6 ipv6_string with
-  | Result.Ok (result, r2) -> String.concat "-:-" result ^ "-Middle-" ^ String.concat "-:-" r2
-  | Result.Error message -> "ERROR: " ^ message
-  *)
