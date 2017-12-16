@@ -4,6 +4,7 @@
    (name        netaddress)
    (public_name netaddress)
    (libraries   (stdint angstrom))
-   (modules     (address ipv4 ipv6 parser))
+   (modules     (netaddress parser))
+   (wrapped     false)
  )
 )

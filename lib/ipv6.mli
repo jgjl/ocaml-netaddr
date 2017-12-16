@@ -4,9 +4,6 @@
     https://tools.ietf.org/html/rfc4291
 *)
 
-type t
-val one : t
-
 type format =
   | Ipv6Short
   | Ipv6Long
@@ -18,6 +15,9 @@ type address_object =
   | Ipv6Range
 
 module Address : sig
+  type t
+
+  val one : t
   val ( < ) : t -> t -> bool
   val ( > ) : t -> t -> bool
   val of_string : string -> t option

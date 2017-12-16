@@ -1,9 +1,9 @@
 
 let test_str2netaddr_pos () =
   let run_twowaytest addr_str =
-    let netaddrv4_opt = Netaddress.Ipv4.Address.of_string addr_str in
+    let netaddrv4_opt = Netaddress.IPv4.Address.of_string addr_str in
     let stringv4 = match netaddrv4_opt with
-      | Some netaddrv4 -> Netaddress.Ipv4.Address.to_string netaddrv4
+      | Some netaddrv4 -> Netaddress.IPv4.Address.to_string netaddrv4
       | None -> "" 
     in
     Alcotest.(check string) ("Conversion of " ^ addr_str ^ " from and to netaddr.") addr_str stringv4
@@ -25,9 +25,9 @@ let test_str2netaddr_pos () =
 
 let test_str2netaddr_neg () =
   let run_twowaytest addr_str =
-    let netaddrv4_opt = Netaddress.Ipv4.Address.of_string addr_str in
+    let netaddrv4_opt = Netaddress.IPv4.Address.of_string addr_str in
     let stringv4 = match netaddrv4_opt with
-      | Some netaddrv4 -> Netaddress.Ipv4.Address.to_string netaddrv4
+      | Some netaddrv4 -> Netaddress.IPv4.Address.to_string netaddrv4
       | None -> "" 
     in
     print_string stringv4;

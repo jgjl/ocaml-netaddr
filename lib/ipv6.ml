@@ -4,7 +4,6 @@
 
 open Stdint
 
-type t = uint128
 
 type address_object =
   | Ipv6Address
@@ -22,7 +21,6 @@ type cur_streak = { cur_streak_start : int; cur_streak_len : int}
 type max_streak = { max_streak_start : int; max_streak_len : int}
 type streak = { streak_start : int; streak_len : int}
 
-let one = Uint128.one
 
 let mask_16lsb = Uint128.of_string "0xffff"
 
@@ -40,6 +38,10 @@ let streak_of_max_streak max_streak =
 
 
 module Address = struct
+
+  type t = uint128
+  let one = Uint128.one
+
   let (<) (a) b =
     (Uint128.compare a b) < 0
 
