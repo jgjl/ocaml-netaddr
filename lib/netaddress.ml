@@ -195,15 +195,15 @@ module IPv6 = struct
   let mask_16lsb = Uint128.of_string "0xffff"
 
   let max_streak_of_cur_streak cur_streak =
-    {max_streak_start = cur_streak.cur_streak_start; 
+    {max_streak_start = cur_streak.cur_streak_start;
     max_streak_len = cur_streak.cur_streak_len}
 
   let streak_of_cur_streak cur_streak =
-    {streak_start = cur_streak.cur_streak_start; 
+    {streak_start = cur_streak.cur_streak_start;
     streak_len = cur_streak.cur_streak_len}
 
   let streak_of_max_streak max_streak =
-    {streak_start = max_streak.max_streak_start; 
+    {streak_start = max_streak.max_streak_start;
     streak_len = max_streak.max_streak_len}
 
 
@@ -215,24 +215,24 @@ module IPv6 = struct
 
     let find_first_longest_streak element_selector element_list =
       Pervasives.(
-        let detect_list (i, cur_opt, max_opt) value = 
+        let detect_list (i, cur_opt, max_opt) value =
         begin
           let element_selected = element_selector value in
           print_string (" Selected element " ^ string_of_int i ^ " : " ^ string_of_bool element_selected ^ "\n");
-          let new_cur, new_max = 
+          let new_cur, new_max =
             match cur_opt with
             | None ->
             begin
               if element_selected then
                 Some {cur_streak_start = i; cur_streak_len = 1}, max_opt
-              else 
+              else
                 None, max_opt
             end
             | Some last_cur ->
             begin
               if element_selected then
                 Some {last_cur with cur_streak_len = last_cur.cur_streak_len + 1}, max_opt
-              else 
+              else
                 match max_opt with
                 | None -> None, Some (max_streak_of_cur_streak last_cur)
                 | Some last_max when last_cur.cur_streak_len > last_max.max_streak_len-> None, Some (max_streak_of_cur_streak last_cur)
@@ -244,11 +244,11 @@ module IPv6 = struct
         match List.fold_left detect_list (0, None, None) element_list with
         | _, Some cur_streak, None ->
           Some (streak_of_cur_streak cur_streak)
-        | _, Some cur_streak, Some max_streak when cur_streak.cur_streak_len > max_streak.max_streak_len -> 
+        | _, Some cur_streak, Some max_streak when cur_streak.cur_streak_len > max_streak.max_streak_len ->
           Some (streak_of_cur_streak cur_streak)
-        | _, _, Some max_streak -> 
+        | _, _, Some max_streak ->
           Some (streak_of_max_streak max_streak)
-        | _, _, None -> 
+        | _, _, None ->
           None
       )
 
@@ -256,7 +256,7 @@ module IPv6 = struct
       (*assert (List.length list = 8);*)
       let stringsis = (List.map string_of_int list) in
       print_string (" Int: " ^ (String.concat ":" stringsis) ^ "\n");
-      List.fold_left (fun a e -> 
+      List.fold_left (fun a e ->
                         Uint128.(
                           (*shift_left (logor a (of_int e)) 16*)
                           logor (shift_left a 16) (of_int e)
@@ -275,7 +275,7 @@ module IPv6 = struct
             let missing_length = 8 - ((List.length part1) + (List.length part2)) in
             if missing_length = 0 then
               Some (ints_to_value (part1 @ part2))
-            else 
+            else
               let complete_int_list = (List.concat [part1; List.init missing_length (fun x -> 0); part2]) in
               Some (ints_to_value complete_int_list)
           )
@@ -286,7 +286,7 @@ module IPv6 = struct
       let b16_values = List.map (fun sw -> Uint128.(logand (shift_right netaddr sw) mask_16lsb)) shift_list in
       (* Find the longest list of conscutive zeros to be replaced by :: in the output *)
       (* Convert value to hex, remove '0x' prefix *)
-      let uint_to_hex v = 
+      let uint_to_hex v =
         let hex_raw = Uint128.to_string_hex v in
         let hex_raw_len = String.length hex_raw in
         String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
@@ -295,9 +295,9 @@ module IPv6 = struct
         (* No list of consecutive zeros found, just print every element separated by ':' *)
         | None ->
           String.concat ":" (List.map uint_to_hex b16_values)
-        (* List of consecutive zeros found, replace it by '::', print every element separated 
+        (* List of consecutive zeros found, replace it by '::', print every element separated
             by ':' elsewhere *)
-        | Some streak -> 
+        | Some streak ->
           begin
             let value_array = Array.of_list (List.map uint_to_hex b16_values) in
             let part2_start = streak.streak_start+streak.streak_len in

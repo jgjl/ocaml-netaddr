@@ -4,7 +4,7 @@ let test_str2netaddr_sameinout () =
     let netaddrv6_opt = Netaddress.IPv6.Address.of_string addr_str in
     let stringv6 = match netaddrv6_opt with
       | Some netaddrv6 -> Netaddress.IPv6.Address.to_string netaddrv6
-      | None -> "" 
+      | None -> ""
     in
     Alcotest.(check string) ("Conversion of " ^ addr_str ^ " from and to netaddr -" ^ stringv6 ^ "-.") addr_str stringv6
   in
