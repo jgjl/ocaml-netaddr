@@ -6,6 +6,8 @@ type parsed_ipv4 = int * int * int * int
 
 type parsed_ipv6 = int list * int list
 
+type parsed_ipv6_prefix = int
+
 let is_dot =
     function | '.' -> true | _ -> false
 
@@ -23,6 +25,36 @@ let end_of_string =
         | None | Some '.' -> return ()
         | Some c-> fail ("end_of_string, next char: " ^ (String.make 1 c))
 
+type read_bit7_state =
+| RB7S_start
+| RB7S_1
+| RB7S_1_2
+| RB7S_2_5
+| RB7S_r_09
+| RB7S_end
+
+let read_bit7 =
+  (*
+    Design reading bytes as state machine.
+    Accept is implicitly enabled for all states by the default -> None transition.
+  *)
+  (scan RB7S_start 
+    (fun (state) c -> 
+        match state, c with
+        | RB7S_start, '1'        -> Some RB7S_1
+        | RB7S_start, '2' .. '9' -> Some RB7S_r_09
+        | RB7S_1,     '0' .. '1' -> Some RB7S_r_09
+        | RB7S_1,     '2'        -> Some RB7S_1_2
+        | RB7S_1,     '3' .. '9' -> Some RB7S_end
+        | RB7S_1_2,  '0' .. '8' -> Some RB7S_end
+        | RB7S_r_09,  '0' .. '9' -> Some RB7S_end
+        | _, _ -> None
+        )) >>= function 
+                | result, RB7S_start -> fail "Could not read 7bit value"
+                | result, _ -> return result 
+
+let read_bit5 = read_bit7
+
 type read_byte_state =
 | RBS_start
 | RBS_01
@@ -34,22 +66,22 @@ type read_byte_state =
 
 let read_byte =
   (*
-    Design as state machine.
+    Design reading bytes as state machine.
     Accept is implicitly enabled for all states by the default -> None transition.
   *)
   (scan RBS_start 
     (fun (state) c -> 
         match state, c with
         | RBS_start, '0' .. '1' -> Some RBS_01
-        | RBS_start, '2' -> Some RBS_2
+        | RBS_start, '2'        -> Some RBS_2
         | RBS_start, '3' .. '9' -> Some RBS_39
-        | RBS_01, '0' .. '9' -> Some RBS_r_09
-        | RBS_r_09, '0' .. '9' -> Some RBS_end
-        | RBS_39, '0' .. '9' -> Some RBS_end
-        | RBS_2, '0' .. '4' -> Some RBS_r_09
-        | RBS_2, '5' -> Some RBS_2_5
-        | RBS_2, '6' .. '9' -> Some RBS_end
-        | RBS_2_5, '0' .. '5' -> Some RBS_end
+        | RBS_01,    '0' .. '9' -> Some RBS_r_09
+        | RBS_r_09,  '0' .. '9' -> Some RBS_end
+        | RBS_39,    '0' .. '9' -> Some RBS_end
+        | RBS_2,     '0' .. '4' -> Some RBS_r_09
+        | RBS_2,     '5'        -> Some RBS_2_5
+        | RBS_2,     '6' .. '9' -> Some RBS_end
+        | RBS_2_5,   '0' .. '5' -> Some RBS_end
         | _, _ -> None
         )) >>= function 
                 | result, RBS_start -> fail "Could not read byte value"
@@ -148,18 +180,20 @@ let parser_ipv6_part =
     (string ":")
 
 let parser_ipv6 = 
-  (*
-  parser_ipv6_part <* end_of_input
-  *)
   (parser_ipv6_part <* end_of_input)
-  >>| 
+  >>|
   (fun (part1, part2) -> (List.map int_of_hex_string part1, List.map int_of_hex_string part2))
 
+let parser_ipv6_range =
+  lift2 (fun (s_p1, s_p2) (e_p1, e_p2) -> 
+          (List.map int_of_hex_string s_p1, List.map int_of_hex_string s_p2),
+          (List.map int_of_hex_string e_p1, List.map int_of_hex_string e_p2))
+  (parser_ipv6_part <* char '-')
+  (parser_ipv6_part <* end_of_input)
 
-let parse_ipv6 ipv6_string =
-  match parse_string parser_ipv6 ipv6_string with
-  | Result.Ok (result1, result2) -> 
-      String.concat "-:-" (List.map string_of_int result1) ^ "::" ^
-      String.concat "-:-" (List.map string_of_int result2)
-  | Result.Error message -> "ERROR: " ^ message
+let parser_ipv6_network =
+  lift2 (fun (s_p1, s_p2) prefix_len ->
+          (List.map int_of_hex_string s_p1, List.map int_of_hex_string s_p2), (int_of_string prefix_len))
+  (parser_ipv6_part <* char '/')
+  (read_bit7 <* end_of_input)
 
