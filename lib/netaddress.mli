@@ -1,8 +1,8 @@
-(* 
+(*
 Todo
  - Networks
  - Ranges
- - Address classification 
+ - Address classification
    https://www.iana.org/assignments/ipv4-address-space/ipv4-address-space.xhtml
    https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
    Create automatic import script? The data is available as XML and csv.
@@ -18,10 +18,10 @@ Ideas
 exception Result_out_of_range of string
 exception Parser_error of string
 
-module IPv4 : 
+module IPv4 :
   sig
     type t
-    module Address : 
+    module Address :
       sig
         type a
         val one : a
