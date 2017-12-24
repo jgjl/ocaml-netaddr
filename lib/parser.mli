@@ -4,6 +4,7 @@ val read_bit7 : string Angstrom.t
 val read_bit5 : string Angstrom.t
 
 type parsed_ipv4 = int * int * int * int
+
 type parsed_ipv4_prefix = int
 (*
  * Get a parser for IPv4 dotted quad notation

@@ -80,7 +80,7 @@ module IPv6 : sig
         val to_string : r -> string
         val element_of : r -> Address.a -> bool
         val intersect : r -> r -> bool
-        val make : t -> t -> r option
+        val make : Address.a -> Address.a -> r option
         val size : r -> t
       end
     module Network :
@@ -91,7 +91,7 @@ module IPv6 : sig
         val element_of : n -> Address.a -> bool
         val subnet_of : n -> n -> bool
         val prefix_len : n -> int
-        val make : t -> int -> n option
+        val make : Address.a -> int -> n option
       end
   end
 

@@ -2,12 +2,6 @@
 exception Result_out_of_range of string
 exception Parser_error of string
 
-type parsed_ipv4 = int * int * int * int
-
-type parsed_ipv6 = int list * int list
-
-type parsed_ipv6_prefix = int
-
 module type Address = sig
   type a
 
@@ -124,9 +118,6 @@ module MakeNetwork (A:Address) = struct
 
   let element_of range address =
     false
-
-  let of_string network_string =
-    make A.one 0
 end
 
 
@@ -141,20 +132,22 @@ module IPv4 = struct
     type a = t
     include MakeAddress(Uint32)
 
-    let strings_to_value (b1, b2, b3, b4) =
+    let of_parsed_value (b1, b2, b3, b4) =
       Uint32.(logor (of_int b4)
               (logor (shift_left (of_int b3) 8)
               (logor (shift_left (of_int b2) 16)
                     (shift_left (of_int b1) 24))))
 
     let of_string s =
-      if (String.length s) >= 16
-      || (String.length s) <= 6 then
-        None
-      else
-        match Angstrom.parse_string Parser.parser_ipv4 s with
-        | Result.Ok result -> Some (strings_to_value result)
-        | _ -> None
+      Pervasives.(
+        if (String.length s) > 15
+        || (String.length s) < 7 then
+          None
+        else
+          match Angstrom.parse_string Parser.parser_ipv4 s with
+          | Result.Ok result -> Some (of_parsed_value result)
+          | _ -> None
+      )
 
     let to_string netaddr =
       Uint32.(
@@ -168,9 +161,36 @@ module IPv4 = struct
 
   module Range = struct
     include MakeRange(Address)
+
+    let of_string s =
+      if (String.length s) > 33
+      || (String.length s) < 13 then
+        None
+      else
+        match Angstrom.parse_string Parser.parser_ipv4_range s with
+        | Result.Ok (first_value, last_value) when first_value < last_value -> 
+          make (Address.of_parsed_value first_value) (Address.of_parsed_value last_value)
+        | _ -> None
   end
   module Network = struct
     include MakeNetwork(Address)
+
+    let of_string network_string =
+      let network_string_len = String.length network_string in
+      if Pervasives.(network_string_len > 18 || network_string_len < 9) then
+        None
+      else
+        let network_range = Angstrom.parse_string Parser.parser_ipv4_network network_string in
+        match network_range with
+        | Result.Error _ -> None
+        | Result.Ok (parsed_network_address, prefix_len) ->
+          let network_address = Address.of_parsed_value parsed_network_address in
+          let network_size_bits = 32 - prefix_len in
+          let divisible = Uint32.(logand network_address ((shift_left one network_size_bits) - one)) in
+          if Uint32.(compare divisible zero) == 0 then
+            make network_address prefix_len
+          else 
+            None
   end
 end
 
@@ -178,11 +198,6 @@ module IPv6 = struct
   open Stdint
 
   type t = uint128
-
-  type address_object =
-    | Ipv6Address
-    | Ipv6Network
-    | Ipv6Range
 
   type format =
     | Ipv6Short
@@ -265,12 +280,12 @@ module IPv6 = struct
                           logor (shift_left a 16) (of_int e)
                         )) Uint128.zero list
 
-    let make part1 part2 =
+    let of_parsed_value (part1, part2) =
       Pervasives.(
         let missing_length = 8 - ((List.length part1) + (List.length part2)) in
         if missing_length = 0 then
           Some (ints_to_value (part1 @ part2))
-        else 
+        else
           let complete_int_list = (List.concat [part1; List.init missing_length (fun x -> 0); part2]) in
           Some (ints_to_value complete_int_list)
       )
@@ -283,7 +298,7 @@ module IPv6 = struct
         let parsed_ipv6 = Angstrom.parse_string Parser.parser_ipv6 ipv6_string in
         match parsed_ipv6 with
         | Result.Error _ -> None
-        | Result.Ok (part1, part2) -> make part1 part2
+        | Result.Ok (part1, part2) -> of_parsed_value (part1, part2)
 
     let to_string netaddr =
       (*let shift_list = [112;96;80;64;48;32;16;0] in*)
@@ -336,13 +351,14 @@ module IPv6 = struct
         match parsed_range with
         | Result.Error _ -> None
         | Result.Ok (first_parsed,last_parser) ->
-          let first = Address.make first_parsed in
-          let last = Address.make last_parser in
+          let first = Address.of_parsed_value first_parsed in
+          let last = Address.of_parsed_value last_parser in
           match first, last with
           | Some first_address, Some last_address when Address.(first_address < last_address) ->
             make first_address last_address
           | _, _ -> None
   end
+
   module Network = struct
     include MakeNetwork(Address)
 
@@ -354,8 +370,17 @@ module IPv6 = struct
         let network_range = Angstrom.parse_string Parser.parser_ipv6_network network_string in
         match network_range with
         | Result.Error _ -> None
-        | Result.Ok (network_address, prefix_len) ->
-          make (Address.make network_address) prefix_len
+        | Result.Ok (parsed_network_address, prefix_len) ->
+          let network_address_opt = Address.of_parsed_value parsed_network_address in
+          match network_address_opt with
+          | None -> None
+          | Some network_address -> 
+            let network_size_bits = 128 - prefix_len in
+            let divisible = Uint128.(logand network_address ((shift_left one network_size_bits) - one)) in
+            if Uint128.(compare divisible zero) == 0 then
+              make network_address prefix_len
+            else 
+              None
   end
 end
 
