@@ -3,22 +3,41 @@ val read_byte : string Angstrom.t
 val read_bit7 : string Angstrom.t
 val read_bit5 : string Angstrom.t
 
-type parsed_ipv4 = int * int * int * int
+module IPv4 : sig
+    type parsed_value = int * int * int * int
+    type parsed_value_prefix = int
 
-type parsed_ipv4_prefix = int
-(*
- * Get a parser for IPv4 dotted quad notation
- *)
-val parser_ipv4 : parsed_ipv4 Angstrom.t
-val parser_ipv4_range : (parsed_ipv4 * parsed_ipv4) Angstrom.t
-val parser_ipv4_network : (parsed_ipv4 * parsed_ipv4_prefix) Angstrom.t
+    val min_str_length_address : int
+    val min_str_length_range : int
+    val min_str_length_network : int
 
-type parsed_ipv6 = int list * int list
-type parsed_ipv6_prefix = int
-(*
- * Get a parser for IPv6 dotted quad notation
- *)
-val parser_ipv6 : parsed_ipv6 Angstrom.t
-val parser_ipv6_range : (parsed_ipv6 * parsed_ipv6) Angstrom.t
-val parser_ipv6_network : (parsed_ipv6 * parsed_ipv6_prefix) Angstrom.t
+    val max_str_length_address : int
+    val max_str_length_range : int
+    val max_str_length_network : int
+    (*
+     * Get a parser for IPv4 dotted quad notation
+     *)
+    val parser : parsed_value Angstrom.t
+    val parser_range : (parsed_value * parsed_value) Angstrom.t
+    val parser_network : (parsed_value * parsed_value_prefix) Angstrom.t
+end
+
+module IPv6 : sig
+    type parsed_value = int list * int list
+    type parsed_value_prefix = int
+
+    val min_str_length_address : int
+    val min_str_length_range : int
+    val min_str_length_network : int
+
+    val max_str_length_address : int
+    val max_str_length_range : int
+    val max_str_length_network : int
+    (*
+     * Get a parser for IPv6 coloned octuple notation
+     *)
+    val parser : parsed_value Angstrom.t
+    val parser_range : (parsed_value * parsed_value) Angstrom.t
+    val parser_network : (parsed_value * parsed_value_prefix) Angstrom.t
+end
 
