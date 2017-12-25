@@ -29,6 +29,8 @@ module IPv4 :
         val ( > ) : a -> a -> bool
         val of_string : string -> a option
         val to_string : a -> string
+        val of_bin_list : int list -> a option
+        val to_bin_list : a -> int list
         val add_int : a -> int -> a
         val sub_int : a -> int -> a
         val add : a -> a -> a
@@ -66,6 +68,7 @@ module IPv6 : sig
         val ( > ) : a -> a -> bool
         val of_string : string -> a option
         val to_string : a -> string
+        val to_bin_list : a -> int list
         val of_ipv4_address : IPv4.Address.a -> a
         val to_ipv4_address : a -> IPv4.Address.a option
         val add_int : a -> int -> a

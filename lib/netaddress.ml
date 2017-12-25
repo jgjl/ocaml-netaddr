@@ -70,6 +70,32 @@ module MakeAddress (N:Stdint.Int) = struct
 
   let sub_int netaddr subtrahend =
     sub netaddr (N.of_int subtrahend)
+  
+  let to_bin_list address =
+    let rec extract_lsb i value =
+      if Pervasives.(i = 0) then
+        []
+      else
+        let next_value = N.shift_right value 1 in
+        N.to_int (N.logand N.one value) :: (extract_lsb Pervasives.(i-1) next_value)
+      in
+    List.rev (extract_lsb N.bits address)
+  
+  let of_bin_list bin_list = 
+    if Pervasives.((List.length bin_list) > N.bits) then None
+    else
+    let two = N.add N.one N.one in
+    try Some (List.fold_left (fun a e ->
+      let new_acc = N.mul a two in
+      let e_value = (match e with 
+      | 0 -> N.zero 
+      | 1 -> N.one 
+      | _ -> raise (Parser_error ("Expected binary value, got " ^ (string_of_int e))))
+        in
+      (N.add new_acc e_value)
+    ) N.one bin_list)
+    with
+      Parser_error _ -> None
 end
 
 module MakeRange (A:Address) = struct
@@ -144,7 +170,7 @@ module IPv4 = struct
         || (String.length s) < 7 then
           None
         else
-          match Angstrom.parse_string Parser.parser_ipv4 s with
+          match Angstrom.parse_string Netaddress_parser.parser_ipv4 s with
           | Result.Ok result -> Some (of_parsed_value result)
           | _ -> None
       )
@@ -167,7 +193,7 @@ module IPv4 = struct
       || (String.length s) < 13 then
         None
       else
-        match Angstrom.parse_string Parser.parser_ipv4_range s with
+        match Angstrom.parse_string Netaddress_parser.parser_ipv4_range s with
         | Result.Ok (first_value, last_value) when first_value < last_value -> 
           make (Address.of_parsed_value first_value) (Address.of_parsed_value last_value)
         | _ -> None
@@ -180,7 +206,7 @@ module IPv4 = struct
       if Pervasives.(network_string_len > 18 || network_string_len < 9) then
         None
       else
-        let network_range = Angstrom.parse_string Parser.parser_ipv4_network network_string in
+        let network_range = Angstrom.parse_string Netaddress_parser.parser_ipv4_network network_string in
         match network_range with
         | Result.Error _ -> None
         | Result.Ok (parsed_network_address, prefix_len) ->
@@ -295,7 +321,7 @@ module IPv6 = struct
       if Pervasives.( ipv6_string_len > 39 || ipv6_string_len < 2) then
         None
       else
-        let parsed_ipv6 = Angstrom.parse_string Parser.parser_ipv6 ipv6_string in
+        let parsed_ipv6 = Angstrom.parse_string Netaddress_parser.parser_ipv6 ipv6_string in
         match parsed_ipv6 with
         | Result.Error _ -> None
         | Result.Ok (part1, part2) -> of_parsed_value (part1, part2)
@@ -347,7 +373,7 @@ module IPv6 = struct
       if Pervasives.( range_string_len > 79 || range_string_len < 5) then
         None
       else
-        let parsed_range = Angstrom.parse_string Parser.parser_ipv6_range range_string in
+        let parsed_range = Angstrom.parse_string Netaddress_parser.parser_ipv6_range range_string in
         match parsed_range with
         | Result.Error _ -> None
         | Result.Ok (first_parsed,last_parser) ->
@@ -367,7 +393,7 @@ module IPv6 = struct
       if Pervasives.( network_string_len > 43 || network_string_len < 4) then
         None
       else
-        let network_range = Angstrom.parse_string Parser.parser_ipv6_network network_string in
+        let network_range = Angstrom.parse_string Netaddress_parser.parser_ipv6_network network_string in
         match network_range with
         | Result.Error _ -> None
         | Result.Ok (parsed_network_address, prefix_len) ->
