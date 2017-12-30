@@ -22,98 +22,117 @@ let end_of_string =
 (*
 Parse values in {0..2^5} used for prefixes of IPv4 addresses.
 *)
-type read_bit5_state =
-| RB5S_start
-| RB5S_r_09
-| RB5S_r_02
-| RB5S_end
+type read_5bit_dec_state =
+| R5BDS_start
+| R5BDS_r_09
+| R5BDS_r_02
+| R5BDS_end
 
-let read_bit5 =
+let read_5bit_dec =
   (*
     Design reading bytes as state machine.
     Accept is implicitly enabled for all states by the default -> None transition.
   *)
-  (scan RB5S_start 
+  (scan R5BDS_start 
     (fun (state) c -> 
         match state, c with
-        | RB5S_start, '0'        -> Some RB5S_end
-        | RB5S_start, '1' .. '2' -> Some RB5S_r_09
-        | RB5S_start, '3'        -> Some RB5S_r_02
-        | RB5S_r_09,  '0' .. '9' -> Some RB5S_end
-        | RB5S_r_02,  '0' .. '2' -> Some RB5S_end
+        | R5BDS_start, '0'        -> Some R5BDS_end
+        | R5BDS_start, '1' .. '2' -> Some R5BDS_r_09
+        | R5BDS_start, '3'        -> Some R5BDS_r_02
+        | R5BDS_r_09,  '0' .. '9' -> Some R5BDS_end
+        | R5BDS_r_02,  '0' .. '2' -> Some R5BDS_end
         | _, _ -> None
         )) >>= function 
-                | result, RB5S_start -> fail "Could not read 5bit value"
+                | result, R5BDS_start -> fail "Could not read 5bit value"
                 | result, _ -> return result 
 
 (*
 Parse values in {0..2^7} used for prefixes of IPv6 addresses.
 *)
-type read_bit7_state =
-| RB7S_start
-| RB7S_1
-| RB7S_1_2
-| RB7S_2_5
-| RB7S_r_09
-| RB7S_end
+type read_7bit_dec_state =
+| R7BDS_start
+| R7BDS_1
+| R7BDS_1_2
+| R7BDS_2_5
+| R7BDS_r_09
+| R7BDS_end
 
-let read_bit7 =
+let read_7bit_dec =
   (*
     Design reading bytes as state machine.
     Accept is implicitly enabled for all states by the default -> None transition.
   *)
-  (scan RB7S_start 
+  (scan R7BDS_start 
     (fun (state) c -> 
         match state, c with
-        | RB7S_start, '0'        -> Some RB7S_end
-        | RB7S_start, '1'        -> Some RB7S_1
-        | RB7S_start, '2' .. '9' -> Some RB7S_r_09
-        | RB7S_1,     '0' .. '1' -> Some RB7S_r_09
-        | RB7S_1,     '2'        -> Some RB7S_1_2
-        | RB7S_1,     '3' .. '9' -> Some RB7S_end
-        | RB7S_1_2,  '0' .. '8' -> Some RB7S_end
-        | RB7S_r_09,  '0' .. '9' -> Some RB7S_end
+        | R7BDS_start, '0'        -> Some R7BDS_end
+        | R7BDS_start, '1'        -> Some R7BDS_1
+        | R7BDS_start, '2' .. '9' -> Some R7BDS_r_09
+        | R7BDS_1,     '0' .. '1' -> Some R7BDS_r_09
+        | R7BDS_1,     '2'        -> Some R7BDS_1_2
+        | R7BDS_1,     '3' .. '9' -> Some R7BDS_end
+        | R7BDS_1_2,   '0' .. '8' -> Some R7BDS_end
+        | R7BDS_r_09,  '0' .. '9' -> Some R7BDS_end
         | _, _ -> None
         )) >>= function 
-                | result, RB7S_start -> fail "Could not read 7bit value"
+                | result, R7BDS_start -> fail "Could not read 7bit value"
                 | result, _ -> return result 
 
 (*
 Parse values in {0..2^8} used for bytes in the IPv4 dotted quad notation.
 *)
-type read_byte_state =
-| RBS_start
-| RBS_01
-| RBS_2
-| RBS_39
-| RBS_2_5
-| RBS_r_09
-| RBS_end
+type read_byte_dec_state =
+| RBDS_start
+| RBDS_01
+| RBDS_2
+| RBDS_39
+| RBDS_2_5
+| RBDS_r_09
+| RBDS_end
 
-let read_byte =
+let read_byte_dec =
   (*
     Design reading bytes as state machine.
     Accept is implicitly enabled for all states by the default -> None transition.
   *)
-  (scan RBS_start 
+  (scan RBDS_start 
     (fun (state) c -> 
         match state, c with
-        | RBS_start, '0' .. '1' -> Some RBS_01
-        | RBS_start, '2'        -> Some RBS_2
-        | RBS_start, '3' .. '9' -> Some RBS_39
-        | RBS_01,    '0' .. '9' -> Some RBS_r_09
-        | RBS_r_09,  '0' .. '9' -> Some RBS_end
-        | RBS_39,    '0' .. '9' -> Some RBS_end
-        | RBS_2,     '0' .. '4' -> Some RBS_r_09
-        | RBS_2,     '5'        -> Some RBS_2_5
-        | RBS_2,     '6' .. '9' -> Some RBS_end
-        | RBS_2_5,   '0' .. '5' -> Some RBS_end
+        | RBDS_start, '0' .. '1' -> Some RBDS_01
+        | RBDS_start, '2'        -> Some RBDS_2
+        | RBDS_start, '3' .. '9' -> Some RBDS_39
+        | RBDS_01,    '0' .. '9' -> Some RBDS_r_09
+        | RBDS_r_09,  '0' .. '9' -> Some RBDS_end
+        | RBDS_39,    '0' .. '9' -> Some RBDS_end
+        | RBDS_2,     '0' .. '4' -> Some RBDS_r_09
+        | RBDS_2,     '5'        -> Some RBDS_2_5
+        | RBDS_2,     '6' .. '9' -> Some RBDS_end
+        | RBDS_2_5,   '0' .. '5' -> Some RBDS_end
         | _, _ -> None
         )) >>= function 
-                | result, RBS_start -> fail "Could not read byte value"
+                | result, RBDS_start -> fail "Could not read byte value"
                 | result, _ -> return result 
 
-let read_16bit =
+(*
+Parse values in {0..2^8} used for bytes in the EUI coloned hexa notation.
+*)
+type read_byte_hex_state =
+| RBHS_start
+| RBHS_first
+| RBHS_end
+
+let read_byte_hex =
+  (scan RBHS_start 
+    (fun (state) c -> 
+        match state, c with
+        | RBHS_start, '0' .. 'f' -> Some RBHS_first
+        | RBHS_first, '0' .. 'f' -> Some RBHS_end
+        | _, _ -> None
+        )) >>= function 
+                | result, RBHS_start -> fail "Could not read byte value"
+                | result, _ -> return result 
+
+let read_16bit_hex =
     lift2 (fun f r -> (String.make 1 f) ^ r)
         (satisfy is_all_hexdigits)
         (scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 3 then
@@ -189,10 +208,10 @@ module IPv4 = struct
   let parser_ipv4_part =
     (lift4
       (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
-      (read_byte <* (skip is_dot))
-      (read_byte <* (skip is_dot))
-      (read_byte <* (skip is_dot))
-      read_byte)
+      (read_byte_dec <* (skip is_dot))
+      (read_byte_dec <* (skip is_dot))
+      (read_byte_dec <* (skip is_dot))
+      read_byte_dec)
 
   let parser_address = 
     parser_ipv4_part <* end_of_input
@@ -205,7 +224,7 @@ module IPv4 = struct
   let parser_network =
     lift2 (fun network_value prefix_len -> (network_value, int_of_string prefix_len))
     (parser_ipv4_part <* char '/')
-    (read_bit5 <* end_of_input)
+    (read_5bit_dec <* end_of_input)
 
   let parse_ipv4 ipv4_string =
       match parse_string parser_address ipv4_string with
@@ -230,9 +249,9 @@ module IPv6 = struct
 
   let parser_value_part =
     at_most_split 0 8
-      (read_16bit <* (satisfy is_colon))
-      ((satisfy is_colon) *> read_16bit)
-      read_16bit
+      (read_16bit_hex <* (satisfy is_colon))
+      ((satisfy is_colon) *> read_16bit_hex)
+      read_16bit_hex
       (*
       (read_16bit <|> (peek_string 1 >>= function | ":" -> return "" | s -> fail s ))
       *)
@@ -254,5 +273,5 @@ module IPv6 = struct
     lift2 (fun (s_p1, s_p2) prefix_len ->
             (List.map int_of_hex_string s_p1, List.map int_of_hex_string s_p2), (int_of_string prefix_len))
     (parser_value_part <* char '/')
-    (read_bit7 <* end_of_input)
+    (read_7bit_dec <* end_of_input)
 end

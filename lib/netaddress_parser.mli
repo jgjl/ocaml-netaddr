@@ -1,7 +1,10 @@
 
-val read_byte : string Angstrom.t
-val read_bit7 : string Angstrom.t
-val read_bit5 : string Angstrom.t
+(* Read 8, 7, or 5 bit values in decimal or hex encoding *)
+val read_5bit_dec : string Angstrom.t
+val read_7bit_dec : string Angstrom.t
+val read_byte_dec : string Angstrom.t
+val read_byte_hex : string Angstrom.t
+val read_16bit_hex : string Angstrom.t
 
 module IPv4 : sig
     type parsed_value = int * int * int * int
