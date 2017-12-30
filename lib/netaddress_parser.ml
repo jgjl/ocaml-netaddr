@@ -194,7 +194,7 @@ module IPv4 = struct
       (read_byte <* (skip is_dot))
       read_byte)
 
-  let parser = 
+  let parser_address = 
     parser_ipv4_part <* end_of_input
 
   let parser_range =
@@ -208,7 +208,7 @@ module IPv4 = struct
     (read_bit5 <* end_of_input)
 
   let parse_ipv4 ipv4_string =
-      match parse_string parser ipv4_string with
+      match parse_string parser_address ipv4_string with
       | Result.Ok (b1,b2,b3,b4) -> (string_of_int b1) ^ "." ^ string_of_int b2 ^ "." ^ string_of_int b3 ^ "." ^ string_of_int b4
       | Result.Error message -> message
 end
@@ -238,7 +238,7 @@ module IPv6 = struct
       *)
       (string ":")
 
-  let parser =
+  let parser_address =
     (parser_value_part <* end_of_input)
     >>|
     (fun (part1, part2) -> (List.map int_of_hex_string part1, List.map int_of_hex_string part2))

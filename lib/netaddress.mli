@@ -24,17 +24,30 @@ module IPv4 :
     module Address :
       sig
         type a
+        val bit_size : int
+        val zero : a
         val one : a
+        val max : a
+        val logand : t -> t -> t
+        val logor : t -> t -> t
+        val logxor : t -> t -> t
+        val lognot : t -> t
+        val shift_left : t -> int -> t
+        val shift_right : t -> int -> t
+        val compare : t -> t -> int
         val ( < ) : a -> a -> bool
         val ( > ) : a -> a -> bool
-        val of_string : string -> a option
-        val to_string : a -> string
-        val of_bin_list : int list -> a option
-        val to_bin_list : a -> int list
         val add_int : a -> int -> a
         val sub_int : a -> int -> a
         val add : a -> a -> a
         val sub : a -> a -> a
+        val of_string : string -> a option
+        val to_string : a -> string
+        val to_string_bin : a -> string
+        val to_string_oct : a -> string
+        val to_string_hex : a -> string
+        val of_bin_list : int list -> a option
+        val to_bin_list : a -> int list
       end
     module Range :
       sig
@@ -63,18 +76,32 @@ module IPv6 : sig
     module Address :
       sig
         type a
+        val bit_size : int
+        val zero : a
         val one : a
+        val max : a
+        val logand : t -> t -> t
+        val logor : t -> t -> t
+        val logxor : t -> t -> t
+        val lognot : t -> t
+        val shift_left : t -> int -> t
+        val shift_right : t -> int -> t
+        val compare : t -> t -> int
         val ( < ) : a -> a -> bool
         val ( > ) : a -> a -> bool
-        val of_string : string -> a option
-        val to_string : a -> string
-        val to_bin_list : a -> int list
-        val of_ipv4_address : IPv4.Address.a -> a
-        val to_ipv4_address : a -> IPv4.Address.a option
         val add_int : a -> int -> a
         val sub_int : a -> int -> a
         val add : a -> a -> a
         val sub : a -> a -> a
+        val of_string : string -> a option
+        val to_string : a -> string
+        val to_string_bin : a -> string
+        val to_string_oct : a -> string
+        val to_string_hex : a -> string
+        val of_bin_list : int list -> a option
+        val to_bin_list : a -> int list
+        val of_ipv4_address : IPv4.Address.a -> a
+        val to_ipv4_address : a -> IPv4.Address.a option
       end
     module Range :
       sig
@@ -98,7 +125,8 @@ module IPv6 : sig
       end
   end
 
-type ipaddress =
+(*
+type ipobject =
   | IPv4Address of IPv4.Address.a
   | IPv6Address of IPv6.Address.a
   | IPv4Range of IPv4.Range.r
@@ -106,3 +134,5 @@ type ipaddress =
   | IPv4Network of IPv4.Network.n
   | IPv6Network of IPv6.Network.n
 
+val ipobject_of_string : string -> ipobject option
+*)

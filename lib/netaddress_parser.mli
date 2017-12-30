@@ -17,7 +17,7 @@ module IPv4 : sig
     (*
      * Get a parser for IPv4 dotted quad notation
      *)
-    val parser : parsed_value Angstrom.t
+    val parser_address : parsed_value Angstrom.t
     val parser_range : (parsed_value * parsed_value) Angstrom.t
     val parser_network : (parsed_value * parsed_value_prefix) Angstrom.t
 end
@@ -36,7 +36,7 @@ module IPv6 : sig
     (*
      * Get a parser for IPv6 coloned octuple notation
      *)
-    val parser : parsed_value Angstrom.t
+    val parser_address : parsed_value Angstrom.t
     val parser_range : (parsed_value * parsed_value) Angstrom.t
     val parser_network : (parsed_value * parsed_value_prefix) Angstrom.t
 end
