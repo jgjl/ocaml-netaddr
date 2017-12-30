@@ -355,7 +355,9 @@ module IPv6 = struct
     let to_string netaddr =
       (*let shift_list = [112;96;80;64;48;32;16;0] in*)
       (* Shift and 'and' each 16bit part of the value*)
-      let b16_values = List.map (fun sw -> Uint128.(logand (shift_right netaddr sw) mask_16lsb)) shift_list in
+      let b16_values = List.map 
+                        (fun sw -> Uint128.(logand (shift_right netaddr sw) mask_16lsb)) 
+                        shift_list in
       (* Find the longest list of conscutive zeros to be replaced by :: in the output *)
       (* Convert value to hex, remove '0x' prefix *)
       let uint_to_hex v = 
@@ -363,16 +365,17 @@ module IPv6 = struct
         let hex_raw_len = String.length hex_raw in
         String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
         in
+      let value_list = List.map uint_to_hex b16_values in
       match find_first_longest_streak (fun e -> Uint128.(compare e zero) = 0) b16_values with
         (* No list of consecutive zeros found, just print every element separated by ':' *)
         | None ->
-          String.concat ":" (List.map uint_to_hex b16_values)
+          String.concat ":" value_list
         (* List of consecutive zeros found, replace it by '::', print every element separated 
             by ':' elsewhere *)
         | Some streak -> 
           begin
-            let value_array = Array.of_list (List.map uint_to_hex b16_values) in
-            let part2_start = streak.streak_start+streak.streak_len in
+            let value_array = Array.of_list value_list in
+            let part2_start = streak.streak_start + streak.streak_len in
             let part2_len = (Array.length value_array) - part2_start in
             let part1 = Array.to_list (Array.sub value_array 0 streak.streak_start) in
             let part2 = Array.to_list (Array.sub value_array part2_start part2_len) in
@@ -407,7 +410,7 @@ module IPv6 = struct
           let first = Address.of_parsed_value first_parsed in
           let last = Address.of_parsed_value last_parser in
           match first, last with
-          | Some first_address, Some last_address when Address.(first_address < last_address) ->
+          | Some first_address, Some last_address ->
             make first_address last_address
           | _, _ -> None
   end
@@ -429,12 +432,7 @@ module IPv6 = struct
           match network_address_opt with
           | None -> None
           | Some network_address -> 
-            let network_size_bits = Uint128.bits - prefix_len in
-            let divisible = Uint128.(logand network_address ((shift_left one network_size_bits) - one)) in
-            if Uint128.(compare divisible zero) == 0 then
-              make network_address prefix_len
-            else 
-              None
+            make network_address prefix_len
   end
 end
 
