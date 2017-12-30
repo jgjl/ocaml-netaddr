@@ -291,7 +291,6 @@ module IPv6 = struct
         let detect_list (i, cur_opt, max_opt) value = 
         begin
           let element_selected = element_selector value in
-          print_string (" Selected element " ^ string_of_int i ^ " : " ^ string_of_bool element_selected ^ "\n");
           let new_cur, new_max = 
             match cur_opt with
             | None ->
@@ -327,11 +326,8 @@ module IPv6 = struct
 
     let ints_to_value list =
       (*assert (List.length list = 8);*)
-      let stringsis = (List.map string_of_int list) in
-      print_string (" Int: " ^ (String.concat ":" stringsis) ^ "\n");
       List.fold_left (fun a e -> 
                         Uint128.(
-                          (*shift_left (logor a (of_int e)) 16*)
                           logor (shift_left a 16) (of_int e)
                         )) Uint128.zero list
 
