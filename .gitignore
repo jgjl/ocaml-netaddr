@@ -3,3 +3,4 @@ _build
 *.install
 *.merlin
 jbuild-workspace
+.idea

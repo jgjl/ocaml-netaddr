@@ -8,15 +8,15 @@ author: "Jeremias Blendin"
 license: "ISC"
 
 build: [
-  ["jbuilder" "subst"] {pinned}
-  ["jbuilder" "build" "-p" name "-j" jobs]
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
 ]
 build-test: [
-  ["jbuilder" "runtest" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs]
 ]
 
 depends: [
-  "jbuilder"     {build & >="1.0"}
+  "dune"     {build & >="1.0"}
   "configurator" {build}
   "stdint"
   "angstrom"

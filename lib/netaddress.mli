@@ -41,6 +41,7 @@ module IPv4 :
         val sub_int : a -> int -> a
         val add : a -> a -> a
         val sub : a -> a -> a
+        val get_bit : a -> int -> bool
         val of_string : string -> a option
         val to_string : a -> string
         val to_string_bin : a -> string
@@ -93,6 +94,7 @@ module IPv6 : sig
         val sub_int : a -> int -> a
         val add : a -> a -> a
         val sub : a -> a -> a
+        val get_bit : a -> int -> bool
         val of_string : string -> a option
         val to_string : a -> string
         val to_string_bin : a -> string

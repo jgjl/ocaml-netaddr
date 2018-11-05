@@ -29,6 +29,7 @@ module type Address = sig
   val sub_int : a -> int -> a
   val add : a -> a -> a
   val sub : a -> a -> a
+  val get_bit : a -> int -> bool
 end
 
 module type Range = sig
@@ -92,7 +93,12 @@ module MakeAddress (N:Stdint.Int) = struct
 
   let sub_int netaddr subtrahend =
     sub netaddr (N.of_int subtrahend)
-  
+
+  let get_bit netaddr index =
+    N.(
+       (compare (logand (shift_right netaddr Pervasives.(bits - index)) one) one) == 0
+    )
+
   let to_bin_list address =
     let rec extract_lsb i value =
       if Pervasives.(i = 0) then
