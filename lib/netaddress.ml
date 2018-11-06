@@ -29,7 +29,7 @@ module type Address = sig
   val sub_int : a -> int -> a
   val add : a -> a -> a
   val sub : a -> a -> a
-  val get_bit : a -> int -> bool
+  (*val get_bit : a -> int -> bool*)
 end
 
 module type Range = sig

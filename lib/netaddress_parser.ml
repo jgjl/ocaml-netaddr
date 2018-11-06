@@ -17,7 +17,7 @@ let end_of_string =
     peek_char
     >>= function
         | None | Some '.' -> return ()
-        | Some c-> fail ("end_of_string, next char: " ^ (String.make 1 c))
+        | Some c -> fail ("end_of_string, next char: " ^ (String.make 1 c))
 
 (*
 Parse values in {0..2^5} used for prefixes of IPv4 addresses.

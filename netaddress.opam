@@ -1,4 +1,6 @@
 opam-version: "1.2"
+name: "netddress"
+synopsis: "A clone of Python's netaddr library"
 maintainer:   "=@jgjl.de"
 homepage:     "https://github.com/jgjl/ocaml-netaddr"
 dev-repo:     "https://github.com/jgjl/ocaml-netaddr.git"
@@ -22,4 +24,3 @@ depends: [
   "angstrom"
   "alcotest" {test & >="0.7.0"}
 ]
-available: [ocaml-version >= "4.05.0"]
