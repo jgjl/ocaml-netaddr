@@ -49,6 +49,10 @@ module IPv4 :
         val to_string_hex : a -> string
         val of_bin_list : int list -> a option
         val to_bin_list : a -> int list
+        val of_int : int -> a
+        val to_int : a -> int
+        val of_int32 : int32 -> a
+        val to_int32 : a -> int32
       end
     module Range :
       sig

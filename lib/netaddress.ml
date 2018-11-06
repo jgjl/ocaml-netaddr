@@ -219,6 +219,12 @@ module IPv4 = struct
         let b3 = logand (shift_right netaddr 24) mask_8lsb in
         (to_string b3 ^"."^ to_string b2 ^"."^ to_string b1 ^"."^ to_string b0)
       )
+
+    let of_int = Uint32.of_int
+    let to_int = Uint32.to_int
+    let of_int32 = Uint32.of_int32
+    let to_int32 = Uint32.to_int32
+
   end
 
   module Range = struct
