@@ -24,3 +24,5 @@ depends: [
   "angstrom"
   "alcotest" {test & >="0.7.0"}
 ]
+
+available: [ ocaml-version >= "4.06.0" ]
