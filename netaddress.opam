@@ -5,7 +5,7 @@ maintainer:   "=@jgjl.de"
 homepage:     "https://github.com/jgjl/ocaml-netaddr"
 dev-repo:     "https://github.com/jgjl/ocaml-netaddr.git"
 bug-reports:  "https://github.com/jgjl/ocaml-netaddr/issues"
-version: "0.5"
+version: "0.5.1"
 author: "Jeremias Blendin"
 license: "ISC"
 
