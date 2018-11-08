@@ -32,13 +32,14 @@ module type Address = sig
   (*val get_bit : a -> int -> bool*)
 end
 
+(*
 module type Range = sig
   type r
 
   val of_string : string -> r option
   val to_string : r -> string
-  val element_of : r -> bool
-  val intersect : r -> r -> r
+  val contains : r -> bool
+  val contains_range : r -> r -> r
 end
 
 module type Network = sig
@@ -46,11 +47,11 @@ module type Network = sig
 
   val of_string : string -> n option
   val to_string : n -> string
-  val element_of : n -> bool
-  val subnet_of : n -> n -> bool
+  val contains : n -> bool
+  val contains_network : n -> n -> bool
   val prefix_len : n -> int
 end
-
+*)
 
 module MakeAddress (N:Stdint.Int) = struct
   let bit_size = N.bits
@@ -127,36 +128,48 @@ module MakeAddress (N:Stdint.Int) = struct
 end
 
 module MakeRange (A:Address) = struct
-  type r = {first: A.a; last: A.a}
+  type r = {r_first: A.a; r_last: A.a}
 
   let make first last =
     if A.(first < last) then
-      Some {first = first; last = last}
+      Some {r_first = first; r_last = last}
     else
       None
 
   let to_string range =
-    (A.to_string range.first) ^ "-" ^ (A.to_string range.last)
+    (A.to_string range.r_first) ^ "-" ^ (A.to_string range.r_last)
 
-  let element_of range address =
-    if (A.compare range.first address) <= 0 &&
-        (A.compare range.last address) >= 0 then
+  let get_address range = 
+    range.r_first
+
+  let get_last_address range = 
+    range.r_last
+
+  let size range =
+    A.sub range.r_last range.r_first
+
+  let contains range address =
+    if (A.compare range.r_first address) <= 0 &&
+        (A.compare range.r_last address) >= 0 then
       true
     else
       false
 
-  let intersect range1 range2 =
-    element_of range1 range2.first && element_of range1 range2.last
-
-  let size range =
-    A.sub range.last range.first
+  let contains_range range1 range2 =
+    contains range1 range2.r_first && contains range1 range2.r_last
 end
 
 module MakeNetwork (A:Address) = struct
-  type n = {first: A.a; last: A.a; prefix_len: int}
+  type n = {n_first: A.a; n_last: A.a; prefix_len: int}
+
+  let get_address n =
+    n.n_first
+
+  let get_last_address n =
+    n.n_last
 
   let to_string network =
-    A.to_string network.first ^ "/" ^ string_of_int network.prefix_len
+    A.to_string network.n_first ^ "/" ^ string_of_int network.prefix_len
 
   let prefix_len network =
     network.prefix_len
@@ -167,19 +180,19 @@ module MakeNetwork (A:Address) = struct
     let last = A.(add first network_size) in
     let divisible = A.(logand first network_size) in
     if A.(compare divisible zero) == 0 then
-      Some {first= first; last=last; prefix_len= prefix_len}
+      Some {n_first= first; n_last=last; prefix_len= prefix_len}
     else 
       None
 
-  let element_of network address =
-    if (A.compare network.first address) <= 0 &&
-        (A.compare network.last address) >= 0 then
+  let contains network address =
+    if (A.compare network.n_first address) <= 0 &&
+        (A.compare network.n_last address) >= 0 then
       true
     else
       false
 
-  let subnet_of network subnet =
-    element_of network subnet.first && element_of network subnet.last
+  let contains_network network subnet =
+    contains network subnet.n_first && contains network subnet.n_last
 end
 
 

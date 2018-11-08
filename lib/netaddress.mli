@@ -57,22 +57,26 @@ module IPv4 :
     module Range :
       sig
         type r
+        val make : t -> t -> r option
         val of_string : string -> r option
         val to_string : r -> string
-        val element_of : r -> Address.a -> bool
-        val intersect : r -> r -> bool
-        val make : t -> t -> r option
+        val get_address : r -> Address.a
+        val get_last_address : r -> Address.a
         val size : r -> t
+        val contains : r -> Address.a -> bool
+        val contains_range : r -> r -> bool
       end
     module Network :
       sig
         type n
+        val make : t -> int -> n option
         val of_string : string -> n option
         val to_string : n -> string
-        val element_of : n -> Address.a -> bool
-        val subnet_of : n -> n -> bool
+        val get_address : n -> Address.a
+        val get_last_address : n -> Address.a
         val prefix_len : n -> int
-        val make : t -> int -> n option
+        val contains : n -> Address.a -> bool
+        val contains_network : n -> n -> bool
       end
   end
 
@@ -112,22 +116,26 @@ module IPv6 : sig
     module Range :
       sig
         type r
+        val make : Address.a -> Address.a -> r option
         val of_string : string -> r option
         val to_string : r -> string
-        val element_of : r -> Address.a -> bool
-        val intersect : r -> r -> bool
-        val make : Address.a -> Address.a -> r option
+        val get_address : r -> Address.a
+        val get_last_address : r -> Address.a
         val size : r -> t
+        val contains : r -> Address.a -> bool
+        val contains_range : r -> r -> bool
       end
     module Network :
       sig
         type n
+        val make : Address.a -> int -> n option
         val of_string : string -> n option
         val to_string : n -> string
-        val element_of : n -> Address.a -> bool
-        val subnet_of : n -> n -> bool
+        val get_address : n -> Address.a
+        val get_last_address : n -> Address.a
         val prefix_len : n -> int
-        val make : Address.a -> int -> n option
+        val contains : n -> Address.a -> bool
+        val contains_network : n -> n -> bool
       end
   end
 
