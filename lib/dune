@@ -1,11 +1,8 @@
-(jbuild_version 1)
 (library
- (
    (name        netaddress)
    (public_name netaddress)
-   (libraries   (stdint angstrom))
-   (modules     (netaddress netaddress_parser))
+   (libraries   stdint angstrom result)
+   (modules     netaddress netaddress_parser)
    (wrapped     false)
    (synopsis    "A clone of Python's netaddr")
- )
 )
