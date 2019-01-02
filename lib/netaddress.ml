@@ -417,6 +417,9 @@ module IPv6 = struct
         Some (Uint128.to_uint32 (Uint128.logand mask_32lsb address))
       else
         None
+      
+    let of_std_uint128 std_uint128 =
+      std_uint128
   end
 
   module Range = struct
@@ -461,12 +464,3 @@ module IPv6 = struct
   end
 end
 
-(*
-type ipaddress =
-  | IPv4Address of IPv4.Address.a
-  | IPv6Address of IPv6.Address.a
-  | IPv4Range of IPv4.Range.r
-  | IPv6Range of IPv6.Range.r
-  | IPv4Network of IPv4.Network.n
-  | IPv6Network of IPv6.Network.n
-*)

@@ -112,6 +112,7 @@ module IPv6 : sig
         val to_bin_list : a -> int list
         val of_ipv4_address : IPv4.Address.a -> a
         val to_ipv4_address : a -> IPv4.Address.a option
+        val of_std_uint128 : Stdint.uint128 -> a
       end
     module Range :
       sig
