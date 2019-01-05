@@ -53,6 +53,7 @@ module IPv4 :
         val to_int : a -> int
         val of_int32 : int32 -> a
         val to_int32 : a -> int32
+        val of_bytes_big_endian : Bytes.t -> int -> a
       end
     module Range :
       sig
@@ -113,6 +114,7 @@ module IPv6 : sig
         val of_ipv4_address : IPv4.Address.a -> a
         val to_ipv4_address : a -> IPv4.Address.a option
         val of_std_uint128 : Stdint.uint128 -> a
+        val of_bytes_big_endian : Bytes.t -> int -> a
       end
     module Range :
       sig

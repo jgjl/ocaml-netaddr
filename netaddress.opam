@@ -5,7 +5,7 @@ maintainer:   "=@jgjl.de"
 homepage:     "https://github.com/jgjl/ocaml-netaddr"
 dev-repo:     "https://github.com/jgjl/ocaml-netaddr.git"
 bug-reports:  "https://github.com/jgjl/ocaml-netaddr/issues"
-version: "0.5.3"
+version: "0.5.4"
 author: "Jeremias Blendin"
 license: "ISC"
 
@@ -25,4 +25,4 @@ depends: [
   "alcotest" {test & >="0.7.0"}
 ]
 
-available: [ ocaml-version >= "4.06.0" ]
+available: [ ocaml-version >= "4.04.0" ]
