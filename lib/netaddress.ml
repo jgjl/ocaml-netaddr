@@ -125,6 +125,8 @@ module MakeAddress (N:Stdint.Int) = struct
     ) N.one bin_list)
     with
       Parser_error _ -> None
+    
+  let of_bytes_big_endian = N.of_bytes_big_endian
 end
 
 module MakeRange (A:Address) = struct
