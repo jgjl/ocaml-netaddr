@@ -127,6 +127,7 @@ module MakeAddress (N:Stdint.Int) = struct
       Parser_error _ -> None
     
   let of_bytes_big_endian = N.of_bytes_big_endian
+  
 end
 
 module MakeRange (A:Address) = struct
@@ -240,6 +241,7 @@ module IPv4 = struct
     let of_int32 = Uint32.of_int32
     let to_int32 = Uint32.to_int32
 
+    let of_std_uint32 v = v
   end
 
   module Range = struct
@@ -420,8 +422,7 @@ module IPv6 = struct
       else
         None
       
-    let of_std_uint128 std_uint128 =
-      std_uint128
+    let of_std_uint128 v = v
   end
 
   module Range = struct

@@ -53,6 +53,7 @@ module IPv4 :
         val to_int : a -> int
         val of_int32 : int32 -> a
         val to_int32 : a -> int32
+        val of_std_uint32 : Stdint.uint32 -> a
         val of_bytes_big_endian : Bytes.t -> int -> a
       end
     module Range :
