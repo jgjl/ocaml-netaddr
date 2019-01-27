@@ -188,6 +188,12 @@ module Eui48 = struct
 
   include MakeAddress(Uint48)
 
+  let uint_to_hex v = 
+    let hex_raw = Uint48.to_string_hex v in
+    let hex_raw_len = String.length hex_raw in
+    String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
+  ;;
+
   let of_parsed_value (b1, b2, b3, b4, b5, b6) =
     Uint48.(
       logor (of_int b6)
@@ -211,11 +217,13 @@ module Eui48 = struct
 
   let to_string netaddr =
     Uint48.(
-      let b0 = logand netaddr mask_8lsb in
-      let b1 = logand (shift_right netaddr 8) mask_8lsb in
-      let b2 = logand (shift_right netaddr 16) mask_8lsb in
-      let b3 = logand (shift_right netaddr 24) mask_8lsb in
-      (to_string b3 ^"."^ to_string b2 ^"."^ to_string b1 ^"."^ to_string b0)
+      let b1 = logand netaddr mask_8lsb in
+      let b2 = logand (shift_right netaddr 8) mask_8lsb in
+      let b3 = logand (shift_right netaddr 16) mask_8lsb in
+      let b4 = logand (shift_right netaddr 24) mask_8lsb in
+      let b5 = logand (shift_right netaddr 32) mask_8lsb in
+      let b6 = logand (shift_right netaddr 40) mask_8lsb in
+      (uint_to_hex b6 ^":"^ uint_to_hex b5 ^":"^ uint_to_hex b4 ^":"^ uint_to_hex b3 ^":"^ uint_to_hex b2 ^":"^ uint_to_hex b1)
     )
 
   let of_int = Uint48.of_int
