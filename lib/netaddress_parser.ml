@@ -190,6 +190,50 @@ let rec at_most_split c m pf pr s f =
     )
 
 
+module Eui48 = struct
+  type parsed_value = int * int * int * int * int * int
+  type parsed_value_prefix = int
+
+  let min_str_length_address = 11
+
+  let max_str_length_address = 17
+
+  let stringbytes_to_list b1 b2 b3 b4 b5 b6 =
+      [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
+
+  let parser_eui48_part =
+    lift4 (fun b1 b2 b3 b4 b5 b6 -> 
+               (int_of_string b1, 
+               int_of_string b2, 
+               int_of_string b3, 
+               int_of_string b4, 
+               int_of_string b5, 
+               int_of_string b6))
+      (read_byte_hex <* (skip is_colon))
+      (read_byte_hex <* (skip is_colon))
+      (read_byte_hex <* (skip is_colon))
+      (read_byte_hex <* (skip is_colon))
+    <*> 
+    (read_byte_hex <* (skip is_colon))
+    <*>
+    read_byte_hex
+
+  let parser_address = 
+    parser_eui48_part <* end_of_input
+
+  let parse_eui48 eui48_string =
+      match parse_string parser_address eui48_string with
+      | Result.Ok (b1,b2,b3,b4,b5,b6) -> 
+                    string_of_int b1 ^ ":" ^ 
+                    string_of_int b2 ^ ":" ^ 
+                    string_of_int b3 ^ ":" ^ 
+                    string_of_int b4 ^ ":" ^ 
+                    string_of_int b5 ^ ":" ^ 
+                    string_of_int b6
+      | Result.Error message -> message
+end
+
+
 module IPv4 = struct
   type parsed_value = int * int * int * int
   type parsed_value_prefix = int

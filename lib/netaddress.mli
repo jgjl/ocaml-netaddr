@@ -18,6 +18,40 @@ Ideas
 exception Result_out_of_range of string
 exception Parser_error of string
 
+module Eui48 :
+  sig
+    type a
+    val bit_size : int
+    val zero : a
+    val one : a
+    val max : a
+    val logand : a -> a -> a
+    val logor : a -> a -> a
+    val logxor : a -> a -> a
+    val lognot : a -> a
+    val shift_left : a -> int -> a
+    val shift_right : a -> int -> a
+    val compare : a -> a -> int
+    val ( < ) : a -> a -> bool
+    val ( > ) : a -> a -> bool
+    val add_int : a -> int -> a
+    val sub_int : a -> int -> a
+    val add : a -> a -> a
+    val sub : a -> a -> a
+    val get_bit : a -> int -> bool
+    val of_string : string -> a option
+    val to_string : a -> string
+    val to_string_bin : a -> string
+    val to_string_oct : a -> string
+    val to_string_hex : a -> string
+    val of_bin_list : int list -> a option
+    val to_bin_list : a -> int list
+    val of_int : int -> a
+    val to_int : a -> int
+    val of_bytes_big_endian : Bytes.t -> int -> a
+    val of_std_uint48 : Stdint.uint48 -> a
+  end
+
 module IPv4 :
   sig
     type t

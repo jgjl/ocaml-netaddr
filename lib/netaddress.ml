@@ -8,50 +8,30 @@ module type Address = sig
   val bit_size : int
   val zero : a
   val one : a
-  val max : a
+  (* val max : a *)
   val logand : a -> a -> a
-  val logor : a -> a -> a
-  val logxor : a -> a -> a
-  val lognot : a -> a
+  (* val logor : a -> a -> a *)
+  (* val logxor : a -> a -> a *)
+  (* val lognot : a -> a *)
   val shift_left : a -> int -> a
-  val shift_right : a -> int -> a
+  (* val shift_right : a -> int -> a *)
   val compare : a -> a -> int
   val ( < ) : a -> a -> bool
-  val ( > ) : a -> a -> bool
-  val of_string : string -> a option
+  (* val ( > ) : a -> a -> bool *)
+  (* val of_string : string -> a option *)
   val to_string : a -> string
-  val to_string_bin : a -> string
-  val to_string_oct : a -> string
-  val to_string_hex : a -> string
-  val of_bin_list : int list -> a option
-  val to_bin_list : a -> int list
-  val add_int : a -> int -> a
-  val sub_int : a -> int -> a
+  (* val to_string_bin : a -> string *)
+  (* val to_string_oct : a -> string *)
+  (* val to_string_hex : a -> string *)
+  (* val of_bin_list : int list -> a option *)
+  (* val to_bin_list : a -> int list *)
+  (* val add_int : a -> int -> a *)
+  (* val sub_int : a -> int -> a *)
   val add : a -> a -> a
   val sub : a -> a -> a
   (*val get_bit : a -> int -> bool*)
 end
 
-(*
-module type Range = sig
-  type r
-
-  val of_string : string -> r option
-  val to_string : r -> string
-  val contains : r -> bool
-  val contains_range : r -> r -> r
-end
-
-module type Network = sig
-  type n
-
-  val of_string : string -> n option
-  val to_string : n -> string
-  val contains : n -> bool
-  val contains_network : n -> n -> bool
-  val prefix_len : n -> int
-end
-*)
 
 module MakeAddress (N:Stdint.Int) = struct
   let bit_size = N.bits
@@ -199,6 +179,52 @@ module MakeNetwork (A:Address) = struct
 end
 
 
+module Eui48 = struct
+  open Stdint
+
+  let mask_8lsb = Uint48.of_string "0xff"
+
+  type a = uint48
+
+  include MakeAddress(Uint48)
+
+  let of_parsed_value (b1, b2, b3, b4, b5, b6) =
+    Uint48.(
+      logor (of_int b6)
+      (logor (shift_left (of_int b5) 8)
+      (logor (shift_left (of_int b4) 16)
+      (logor (shift_left (of_int b3) 24)
+      (logor (shift_left (of_int b2) 32)
+            (shift_left (of_int b1) 40)))))
+    )
+
+  let of_string s =
+    Pervasives.(
+      if (String.length s) > Netaddress_parser.Eui48.max_str_length_address
+      || (String.length s) < Netaddress_parser.Eui48.min_str_length_address then
+        None
+      else
+        match Angstrom.parse_string Netaddress_parser.Eui48.parser_address s with
+        | Result.Ok result -> Some (of_parsed_value result)
+        | _ -> None
+    )
+
+  let to_string netaddr =
+    Uint48.(
+      let b0 = logand netaddr mask_8lsb in
+      let b1 = logand (shift_right netaddr 8) mask_8lsb in
+      let b2 = logand (shift_right netaddr 16) mask_8lsb in
+      let b3 = logand (shift_right netaddr 24) mask_8lsb in
+      (to_string b3 ^"."^ to_string b2 ^"."^ to_string b1 ^"."^ to_string b0)
+    )
+
+  let of_int = Uint48.of_int
+  let to_int = Uint48.to_int
+
+  let of_std_uint48 v = v
+end
+
+
 module IPv4 = struct
   open Stdint
 
@@ -280,10 +306,10 @@ module IPv6 = struct
 
   type t = uint128
 
-  type format =
+  (* type format =
     | Ipv6Short
     | Ipv6Long
-    | Ipv6Full
+    | Ipv6Full *)
 
   let shift_list = [112;96;80;64;48;32;16;0]
 
@@ -336,9 +362,11 @@ module IPv6 = struct
               else 
                 match max_opt with
                 | None -> None, Some (max_streak_of_cur_streak last_cur)
-                | Some last_max when last_cur.cur_streak_len > last_max.max_streak_len-> None, Some (max_streak_of_cur_streak last_cur)
-                | Some last_max -> None, Some {max_streak_start = last_cur.cur_streak_start; 
-                                                max_streak_len = last_cur.cur_streak_len}
+                | Some last_max when last_cur.cur_streak_len > last_max.max_streak_len -> 
+                  None, Some (max_streak_of_cur_streak last_cur)
+                | Some _ -> 
+                  None, Some {max_streak_start = last_cur.cur_streak_start; 
+                              max_streak_len = last_cur.cur_streak_len}
             end in
           (succ i), new_cur, new_max
         end in
@@ -366,7 +394,7 @@ module IPv6 = struct
         if missing_length = 0 then
           Some (ints_to_value (part1 @ part2))
         else
-          let complete_int_list = (List.concat [part1; List.init missing_length (fun x -> 0); part2]) in
+          let complete_int_list = (List.concat [part1; List.init missing_length (fun _ -> 0); part2]) in
           Some (ints_to_value complete_int_list)
       )
 

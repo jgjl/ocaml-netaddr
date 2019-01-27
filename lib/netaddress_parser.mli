@@ -6,6 +6,19 @@ val read_byte_dec : string Angstrom.t
 val read_byte_hex : string Angstrom.t
 val read_16bit_hex : string Angstrom.t
 
+module Eui48 : sig
+    type parsed_value = int * int * int * int * int * int
+    type parsed_value_prefix = int
+
+    val min_str_length_address : int
+
+    val max_str_length_address : int
+    (*
+     * Get a parser for IPv4 dotted quad notation
+     *)
+    val parser_address : parsed_value Angstrom.t
+end
+
 module IPv4 : sig
     type parsed_value = int * int * int * int
     type parsed_value_prefix = int
