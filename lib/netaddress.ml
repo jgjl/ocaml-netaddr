@@ -305,7 +305,6 @@ module IPv4 = struct
         | Result.Error _ -> None
         | Result.Ok (parsed_network_address, prefix_len) ->
           let network_address = Address.of_parsed_value parsed_network_address in
-          Printf.printf "Prefix len %d" prefix_len;
           make network_address prefix_len
   end
 end
