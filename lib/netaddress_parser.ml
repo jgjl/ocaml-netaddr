@@ -39,6 +39,7 @@ let read_5bit_dec =
         | R5BDS_start, '0'        -> Some R5BDS_end
         | R5BDS_start, '1' .. '2' -> Some R5BDS_r_09
         | R5BDS_start, '3'        -> Some R5BDS_r_02
+        | R5BDS_start, '4' .. '9' -> Printf.printf "4..9"; Some R5BDS_end
         | R5BDS_r_09,  '0' .. '9' -> Some R5BDS_end
         | R5BDS_r_02,  '0' .. '2' -> Some R5BDS_end
         | _, _ -> None
@@ -240,7 +241,7 @@ module IPv4 = struct
 
   let min_str_length_address = 7
   let min_str_length_range = 15
-  let min_str_length_network = 10
+  let min_str_length_network = 9
 
   let max_str_length_address = 15
   let max_str_length_range = 31

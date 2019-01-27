@@ -176,15 +176,3 @@ module IPv6 : sig
         val contains_network : n -> n -> bool
       end
   end
-
-(*
-type ipobject =
-  | IPv4Address of IPv4.Address.a
-  | IPv6Address of IPv6.Address.a
-  | IPv4Range of IPv4.Range.r
-  | IPv6Range of IPv6.Range.r
-  | IPv4Network of IPv4.Network.n
-  | IPv6Network of IPv6.Network.n
-
-val ipobject_of_string : string -> ipobject option
-*)
