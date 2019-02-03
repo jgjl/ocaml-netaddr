@@ -19,6 +19,7 @@ let test_str2netaddr_sameinout () =
     "2004::4";
     "1:2:3:4:5:6:7:8";
     "1:2:3:4::7:8";
+    "1:2345:6789:1011:1213::1415:ffff";
     "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
     (*"::ffff:192.168.0.1"; not yet *)
   ] in
@@ -54,7 +55,60 @@ let test_str2netaddr () =
   ] in
   List.iter run_twowaytest addr_list
 
+let test_str2network_pos () =
+  let run_twowaytest addr_str =
+    let networkv6_opt = Netaddress.IPv6.Network.of_string addr_str in
+    let stringv6 = match networkv6_opt with
+      | Some netaddrv6 -> Netaddress.IPv6.Network.to_string netaddrv6
+      | None -> ""
+    in
+    Alcotest.(check string) ("Conversion of " ^ addr_str ^ " from and to netaddr.") addr_str stringv6
+  in
+  let network_list = [
+    "2001:34:34::/48";
+    "1000::/12";
+    (* "::ffff:172.16.0.0/108"; Not implemented yet*)
+    "2001:34:54:65::/64";
+  ] in
+  let rec add_full_prefix_range test_list prefix_len =
+    if prefix_len < 0 then
+      test_list
+    else
+      add_full_prefix_range (("::/" ^ string_of_int prefix_len) :: test_list) (prefix_len - 1)
+    in
+  let addr_list_complete = add_full_prefix_range network_list Netaddress.IPv6.Address.bit_size in
+  List.iter run_twowaytest network_list
+;;
+
+
+let test_str2network_neg () =
+  let run_twowaytest network_str =
+    let networkv6_opt = Netaddress.IPv6.Network.of_string network_str in
+    let stringv6 = match networkv6_opt with
+      | Some networkv6 -> Netaddress.IPv6.Network.to_string networkv6
+      | None -> ""
+    in
+    print_string stringv6;
+    Alcotest.(check string) ("Conversion of " ^ network_str ^ " from and to netaddr.") "" stringv6
+  in
+  let addr_list = [
+    "2001/4";
+    "::/129";
+    "11::11/129";
+    "1000::0/-1";
+    "::256/1";
+    "2001:34:54:65:33:ffff::/10";
+    "10.0.0.0.9";
+    "10.0.0.0-8";
+    "172.16.0.0:12";
+    "0.0.-0.0/0";
+  ] in
+  List.iter run_twowaytest addr_list
+;;
+
 let suite = [
-  "convert ip address from and to netaddr object where input = output", `Quick, test_str2netaddr_sameinout;
-  "convert ip address from and to netaddr object where input =/= output", `Quick, test_str2netaddr_sameinout;
+    "convert ip address from and to netaddr object where input = output", `Quick, test_str2netaddr_sameinout;
+    "convert ip address from and to netaddr object where input =/= output", `Quick, test_str2netaddr_sameinout;
+    "convert ip network from and to netaddr object, positive tests", `Quick, test_str2network_pos;
+    "convert ip network from and to netaddr object, negative tests", `Quick, test_str2network_neg;
 ]

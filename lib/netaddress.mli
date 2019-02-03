@@ -44,6 +44,7 @@ module Eui48 :
     val to_string_bin : a -> string
     val to_string_oct : a -> string
     val to_string_hex : a -> string
+    val serialize : Faraday.t -> a -> unit
     val of_bin_list : int list -> a option
     val to_bin_list : a -> int list
     val of_int : int -> a
@@ -81,6 +82,7 @@ module IPv4 :
         val to_string_bin : a -> string
         val to_string_oct : a -> string
         val to_string_hex : a -> string
+        val serialize : Faraday.t -> a -> unit
         val of_bin_list : int list -> a option
         val to_bin_list : a -> int list
         val of_int : int -> a
@@ -96,6 +98,7 @@ module IPv4 :
         val make : t -> t -> r option
         val of_string : string -> r option
         val to_string : r -> string
+        val serialize : Faraday.t -> r -> unit
         val get_address : r -> Address.a
         val get_last_address : r -> Address.a
         val size : r -> t
@@ -108,6 +111,7 @@ module IPv4 :
         val make : t -> int -> n option
         val of_string : string -> n option
         val to_string : n -> string
+        val serialize : Faraday.t -> n -> unit
         val get_address : n -> Address.a
         val get_last_address : n -> Address.a
         val prefix_len : n -> int
@@ -144,6 +148,7 @@ module IPv6 : sig
         val to_string_bin : a -> string
         val to_string_oct : a -> string
         val to_string_hex : a -> string
+        val serialize : Faraday.t -> a -> unit
         val of_bin_list : int list -> a option
         val to_bin_list : a -> int list
         val of_ipv4_address : IPv4.Address.a -> a
@@ -157,6 +162,7 @@ module IPv6 : sig
         val make : Address.a -> Address.a -> r option
         val of_string : string -> r option
         val to_string : r -> string
+        val serialize : Faraday.t -> r -> unit
         val get_address : r -> Address.a
         val get_last_address : r -> Address.a
         val size : r -> t
@@ -169,6 +175,7 @@ module IPv6 : sig
         val make : Address.a -> int -> n option
         val of_string : string -> n option
         val to_string : n -> string
+        val serialize : Faraday.t -> n -> unit
         val get_address : n -> Address.a
         val get_last_address : n -> Address.a
         val prefix_len : n -> int

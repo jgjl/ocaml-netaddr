@@ -2,22 +2,78 @@
 open Stdint
 open Angstrom
 
+let rec at_most m p =
+  (*
+    Contributed by seliopou
+    https://github.com/inhabitedtype/angstrom/issues/110
+  *)
+  if m = 0
+  then return []
+  else
+    (lift2 (fun x xs -> x :: xs) p (at_most (m - 1) p))
+    <|> return []
+;;
+
+let limits n m p =
+  (*
+    Contributed by seliopou
+    https://github.com/inhabitedtype/angstrom/issues/110
+  *)
+  lift2 (fun xs ys -> xs @ ys)
+    (count   n p)
+    (at_most m p)
+;;
+
+let rec at_most_split c m pf pr s f =
+  (*
+    m = max. count
+    pf = first part to match
+    pr = rest part to match
+    s = split part
+    f = split part for the first read field
+  *)
+  if c = m-1 then
+      (lift (fun x -> ([x], [])) s)
+  else 
+    (* Parse (XXXX:)* parts *)
+    (lift2 (fun x1 (xs1, xs2) -> (x1 :: xs1, xs2)) pf (at_most_split (c+1) m pf pr s f))
+    <|>
+    (* Parse (:XXXX) parts, special case handling for addresses starting with "::" *)
+    (
+      if c = 0 then (
+        lift2 (fun _ xs2 -> ([], xs2)) f (limits 1 6 pr)
+        <|>
+        (lift2 (fun _ _ -> ([], [])) f f)
+        )
+      else (
+        (*(lift2 (fun x2 xs2 -> ([], x2::xs2)) s (limits 1 (m-c-1) pr))*)
+        (lift (fun xs -> ([], xs)) (limits 1 (m-c-1) pr))
+        <|>
+        (lift (fun _ -> ([], [])) f)
+      )
+    )
+;;
+
 let is_dot =
     function | '.' -> true | _ -> false
+;;
 
 let is_colon =
     function | ':' -> true | _ -> false
+;;
 
 let is_all_hexdigits = 
     function 
     | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true 
     | _ -> false
+;;
 
 let end_of_string = 
     peek_char
     >>= function
         | None | Some '.' -> return ()
         | Some c -> fail ("end_of_string, next char: " ^ (String.make 1 c))
+;;
 
 (*
 Parse values in {0..2^5} used for prefixes of IPv4 addresses.
@@ -46,6 +102,7 @@ let read_5bit_dec =
         )) >>= function 
                 | result, R5BDS_start -> fail "Could not read 5bit value"
                 | result, _ -> return result 
+;;
 
 (*
 Parse values in {0..2^7} used for prefixes of IPv6 addresses.
@@ -78,6 +135,7 @@ let read_7bit_dec =
         )) >>= function 
                 | result, R7BDS_start -> fail "Could not read 7bit value"
                 | result, _ -> return result 
+;;
 
 (*
 Parse values in {0..2^8} used for bytes in the IPv4 dotted quad notation.
@@ -113,6 +171,7 @@ let read_byte_dec =
         )) >>= function 
                 | result, RBDS_start -> fail "Could not read byte value"
                 | result, _ -> return result 
+;;
 
 (*
 Parse values in {0..2^8} used for bytes in the EUI coloned hexa notation.
@@ -132,191 +191,224 @@ let read_byte_hex =
         )) >>= function 
                 | result, RBHS_start -> fail "Could not read byte value"
                 | result, _ -> return result 
+;;
 
-let read_16bit_hex =
+(*
+Parse values in {0..2^16} used for bytes in the IPv6 coloned hexa notation.
+*)
+let read_16bit_hex_1 =
     lift2 (fun f r -> (String.make 1 f) ^ r)
         (satisfy is_all_hexdigits)
         (scan_string 0 (fun pos c -> if (is_all_hexdigits c) && pos < 3 then
                               Some (pos + 1)
                             else
                               None))
+;;
 
-let rec at_most m p =
-  (*
-    Contributed by seliopou
-    https://github.com/inhabitedtype/angstrom/issues/110
-  *)
-  if m = 0
-  then return []
-  else
-    (lift2 (fun x xs -> x :: xs) p (at_most (m - 1) p))
-    <|> return []
-
-let limits n m p =
-  (*
-    Contributed by seliopou
-    https://github.com/inhabitedtype/angstrom/issues/110
-  *)
-  lift2 (fun xs ys -> xs @ ys)
-    (count   n p)
-    (at_most m p)
-
-let rec at_most_split c m pf pr s f =
-  (*
-    m = max. count
-    pf = first part to match
-    pr = rest part to match
-    s = split part
-    f = split part for the first read field
-  *)
-  if c = m-1 then
-      (lift (fun x -> ([x], [])) s)
-  else 
-    (* Parse (XXXX:)* parts *)
-    (lift2 (fun x1 (xs1, xs2) -> (x1 :: xs1, xs2)) pf (at_most_split (c+1) m pf pr s f))
-    <|>
-    (* Parse (:XXXX) parts, special case handling for addresses starting with "::" *)
-    (
-      if c = 0 then (
-        lift2 (fun _ xs2 -> ([], xs2)) f (limits 1 6 pr)
-        <|>
-        (lift2 (fun _ _ -> ([], [])) f f)
+let read_16bit_hex_2 = 
+  (scan_string 4 
+    (fun state c -> 
+        match state, c with
+        | 4, '0' .. 'f' -> Some 3
+        | 3, '0' .. 'f' -> Some 2
+        | 2, '0' .. 'f' -> Some 1
+        | 1, '0' .. 'f' -> None
+        | _, _ -> None
         )
-      else (
-        (*(lift2 (fun x2 xs2 -> ([], x2::xs2)) s (limits 1 (m-c-1) pr))*)
-        (lift (fun xs -> ([], xs)) (limits 1 (m-c-1) pr))
-        <|>
-        (lift (fun _ -> ([], [])) f)
-      )
-    )
+    ) 
+;;
 
+let read_16bit_hex_3 = 
+  lift (fun cl -> List.fold_left (fun r c -> (r lsl 4) + (int_of_char c)) 0 cl) (at_most 4 (satisfy is_all_hexdigits))
+;;
+
+let read_16bit_hex = read_16bit_hex_1
 
 module Eui48 = struct
-  type parsed_value = int * int * int * int * int * int
-  type parsed_value_prefix = int
+    type parsed_value = int * int * int * int * int * int
+    type parsed_value_prefix = int
 
-  let min_str_length_address = 11
+    let min_str_length_address = 11
 
-  let max_str_length_address = 17
+    let max_str_length_address = 17
 
-  let stringbytes_to_list b1 b2 b3 b4 b5 b6 =
-      [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
+    let stringbytes_to_list b1 b2 b3 b4 b5 b6 =
+        [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4; int_of_string b5; int_of_string b6]
+    ;;
 
-  let parser_eui48_part =
-    lift4 (fun b1 b2 b3 b4 b5 b6 -> 
-               (int_of_string b1, 
-               int_of_string b2, 
-               int_of_string b3, 
-               int_of_string b4, 
-               int_of_string b5, 
-               int_of_string b6))
-      (read_byte_hex <* (skip is_colon))
-      (read_byte_hex <* (skip is_colon))
-      (read_byte_hex <* (skip is_colon))
-      (read_byte_hex <* (skip is_colon))
-    <*> 
-    (read_byte_hex <* (skip is_colon))
-    <*>
-    read_byte_hex
+    let parser_eui48_part =
+        lift4 (fun b1 b2 b3 b4 b5 b6 -> 
+                (int_of_string b1, 
+                int_of_string b2, 
+                int_of_string b3, 
+                int_of_string b4, 
+                int_of_string b5, 
+                int_of_string b6))
+        (read_byte_hex <* (skip is_colon))
+        (read_byte_hex <* (skip is_colon))
+        (read_byte_hex <* (skip is_colon))
+        (read_byte_hex <* (skip is_colon))
+        <*> 
+        (read_byte_hex <* (skip is_colon))
+        <*>
+        read_byte_hex
+    ;;
 
-  let parser_address = 
-    parser_eui48_part <* end_of_input
+    let parser_address = 
+        parser_eui48_part <* end_of_input
+    ;;
 
-  let parse_eui48 eui48_string =
-      match parse_string parser_address eui48_string with
-      | Result.Ok (b1,b2,b3,b4,b5,b6) -> 
-                    string_of_int b1 ^ ":" ^ 
-                    string_of_int b2 ^ ":" ^ 
-                    string_of_int b3 ^ ":" ^ 
-                    string_of_int b4 ^ ":" ^ 
-                    string_of_int b5 ^ ":" ^ 
-                    string_of_int b6
-      | Result.Error message -> message
+    let parse_eui48 eui48_string =
+        match parse_string parser_address eui48_string with
+        | Result.Ok (b1,b2,b3,b4,b5,b6) -> 
+                        string_of_int b1 ^ ":" ^ 
+                        string_of_int b2 ^ ":" ^ 
+                        string_of_int b3 ^ ":" ^ 
+                        string_of_int b4 ^ ":" ^ 
+                        string_of_int b5 ^ ":" ^ 
+                        string_of_int b6
+        | Result.Error message -> message
+    ;;
 end
 
 
 module IPv4 = struct
-  type parsed_value = int * int * int * int
-  type parsed_value_prefix = int
+    type parsed_value = int * int * int * int
+    type parsed_value_prefix = int
 
-  let min_str_length_address = 7
-  let min_str_length_range = 15
-  let min_str_length_network = 9
+    let min_str_length_address = 7
+    let min_str_length_range = 15
+    let min_str_length_network = 9
 
-  let max_str_length_address = 15
-  let max_str_length_range = 31
-  let max_str_length_network = 18
+    let max_str_length_address = 15
+    let max_str_length_range = 31
+    let max_str_length_network = 18
 
-  let stringbytes_to_list b1 b2 b3 b4 =
-      [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
+    let stringbytes_to_list b1 b2 b3 b4 =
+        [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
+    ;;
 
-  let parser_ipv4_part =
-    (lift4
-      (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
-      (read_byte_dec <* (skip is_dot))
-      (read_byte_dec <* (skip is_dot))
-      (read_byte_dec <* (skip is_dot))
-      read_byte_dec)
+    let parser_ipv4_part =
+        (lift4
+        (fun b1 b2 b3 b4 -> int_of_string b1, int_of_string b2, int_of_string b3, int_of_string b4)
+        (read_byte_dec <* (skip is_dot))
+        (read_byte_dec <* (skip is_dot))
+        (read_byte_dec <* (skip is_dot))
+        read_byte_dec)
+    ;;
 
-  let parser_address = 
-    parser_ipv4_part <* end_of_input
+    let parser_address = 
+        parser_ipv4_part <* end_of_input
+    ;;
 
-  let parser_range =
-    lift2 (fun first_value last_value -> (first_value, last_value))
-    (parser_ipv4_part <* char '-')
-    (parser_ipv4_part <* end_of_input)
+    let parser_range =
+        lift2 (fun first_value last_value -> (first_value, last_value))
+        (parser_ipv4_part <* char '-')
+        (parser_ipv4_part <* end_of_input)
+    ;;
 
-  let parser_network =
-    lift2 (fun network_value prefix_len -> (network_value, int_of_string prefix_len))
-    (parser_ipv4_part <* char '/')
-    (read_5bit_dec <* end_of_input)
+    let parser_network =
+        lift2 (fun network_value prefix_len -> (network_value, int_of_string prefix_len))
+        (parser_ipv4_part <* char '/')
+        (read_5bit_dec <* end_of_input)
+    ;;
 
-  let parse_ipv4 ipv4_string =
-      match parse_string parser_address ipv4_string with
-      | Result.Ok (b1,b2,b3,b4) -> (string_of_int b1) ^ "." ^ string_of_int b2 ^ "." ^ string_of_int b3 ^ "." ^ string_of_int b4
-      | Result.Error message -> message
+    let parse_ipv4 ipv4_string =
+        match parse_string parser_address ipv4_string with
+        | Result.Ok (b1,b2,b3,b4) -> (string_of_int b1) ^ "." ^ string_of_int b2 ^ "." ^ string_of_int b3 ^ "." ^ string_of_int b4
+        | Result.Error message -> message
+    ;;
 end
 
 module IPv6 = struct
-  type parsed_value = int list * int list
-  type parsed_value_prefix = int
+    type parsed_value = int list * int list
+    type parsed_value_prefix = int
 
-  let min_str_length_address = 2
-  let min_str_length_range = 5
-  let min_str_length_network = 4
+    let min_str_length_address = 2
+    let min_str_length_range = 5
+    let min_str_length_network = 4
 
-  let max_str_length_address = 39
-  let max_str_length_range = 79
-  let max_str_length_network = 43
+    let max_str_length_address = 39
+    let max_str_length_range = 79
+    let max_str_length_network = 43
 
-  let int_of_hex_string s =
-      int_of_string ("0x" ^ s)
+    let int_of_hex_string s =
+        Printf.printf "Bidde: -%s-" s;
+        int_of_string ("0x" ^ s)
+    ;;
 
-  let parser_value_part =
-    at_most_split 0 8
-      (read_16bit_hex <* (satisfy is_colon))
-      ((satisfy is_colon) *> read_16bit_hex)
-      read_16bit_hex
-      (*
-      (read_16bit <|> (peek_string 1 >>= function | ":" -> return "" | s -> fail s ))
-      *)
-      (string ":")
+    let parser_value_part_1 =
+        at_most_split 0 8
+        (read_16bit_hex <* (satisfy is_colon))
+        ((satisfy is_colon) *> read_16bit_hex)
+        read_16bit_hex
+        (string ":")
+    ;;
 
-  let parser_address =
-    (parser_value_part <* end_of_input)
-    >>|
-    (fun (part1, part2) -> (List.map int_of_hex_string part1, List.map int_of_hex_string part2))
+    type parse_state = 
+    | Start
+    | Before_dc of int
+    | After_dc of int * int
+    | End
 
-  let parser_range =
-    lift2 (fun (s_p1, s_p2) (e_p1, e_p2) ->
-            (List.map int_of_hex_string s_p1, List.map int_of_hex_string s_p2),
-            (List.map int_of_hex_string e_p1, List.map int_of_hex_string e_p2))
-    (parser_value_part <* char '-')
-    (parser_value_part <* end_of_input)
+    let parser_value_part_2 =
+        let rec parse state (bdc, adc) =
+            match state with
+            | Start -> 
+            begin
+                ((read_16bit_hex <* (satisfy is_colon)) >>=
+                    (fun v ->
+                        parse (Before_dc 1) (v :: bdc, adc)))
+                <|> ((satisfy is_colon) >>=
+                    (fun v ->
+                        parse (After_dc (0, 0)) (bdc, adc)))
+            end 
+            | Before_dc bn when bn < 7 ->
+            begin
+                ((read_16bit_hex <* (satisfy is_colon)) >>=
+                    (fun v ->
+                        parse (Before_dc (bn + 1)) (v :: bdc, adc)))
+                <|> ((satisfy is_colon) *> read_16bit_hex >>=
+                    (fun v ->
+                        parse (After_dc (bn, 1)) (bdc, v :: adc)))
+            end
+            | Before_dc bn when bn = 8 ->
+            begin
+                read_16bit_hex >>=
+                    (fun v ->
+                        return (v :: bdc, []))
+            end
+            | After_dc (bn, an) when bn + an < 7 ->
+            begin
+                ((satisfy is_colon) *> read_16bit_hex) >>=
+                    (fun v ->
+                        parse (After_dc (bn, (an + 1))) (bdc, v :: adc))
+            end
+            (* | End -> return (bdc, adc) *)
+            | _ -> return (bdc, adc)
+            in
+        parse Start ([],[])
+    ;;
 
-  let parser_network =
-    lift2 (fun (s_p1, s_p2) prefix_len ->
-            (List.map int_of_hex_string s_p1, List.map int_of_hex_string s_p2), (int_of_string prefix_len))
-    (parser_value_part <* char '/')
-    (read_7bit_dec <* end_of_input)
+    let parser_value_part = parser_value_part_1
+
+    let parser_address =
+        lift (fun (part1, part2) -> (List.map int_of_hex_string part1, List.map int_of_hex_string part2))
+            (parser_value_part <* end_of_input)
+    ;;
+
+    let parser_range =
+        lift2 (fun (s_p1, s_p2) (e_p1, e_p2) ->
+                (List.map int_of_hex_string s_p1, List.map int_of_hex_string s_p2),
+                (List.map int_of_hex_string e_p1, List.map int_of_hex_string e_p2))
+        (parser_value_part <* char '-')
+        (parser_value_part <* end_of_input)
+    ;;
+
+    let parser_network =
+        lift2 (fun (s_p1, s_p2) prefix_len ->
+                (List.map int_of_hex_string s_p1, List.map int_of_hex_string s_p2), (int_of_string prefix_len))
+        (parser_value_part <* char '/')
+        (read_7bit_dec <* end_of_input)
+    ;;
 end

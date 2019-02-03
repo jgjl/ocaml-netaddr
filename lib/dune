@@ -1,8 +1,9 @@
 (library
    (name        netaddress)
    (public_name netaddress)
-   (libraries   stdint angstrom result)
+   (libraries   stdint angstrom faraday result)
    (modules     netaddress netaddress_parser)
    (wrapped     false)
    (synopsis    "A clone of Python's netaddr")
+   (modes native)
 )

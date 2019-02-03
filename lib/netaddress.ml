@@ -20,6 +20,7 @@ module type Address = sig
   (* val ( > ) : a -> a -> bool *)
   (* val of_string : string -> a option *)
   val to_string : a -> string
+  val serialize : Faraday.t -> a -> unit
   (* val to_string_bin : a -> string *)
   (* val to_string_oct : a -> string *)
   (* val to_string_hex : a -> string *)
@@ -60,6 +61,7 @@ module MakeAddress (N:Stdint.Int) = struct
       else
         netaddr + summand
     )
+  ;;
 
   let sub netaddr subtrahend =
     N.(
@@ -68,17 +70,21 @@ module MakeAddress (N:Stdint.Int) = struct
       else
         netaddr - subtrahend
     )
+  ;;
 
   let add_int netaddr summand =
     add netaddr (N.of_int summand)
+  ;;
 
   let sub_int netaddr subtrahend =
     sub netaddr (N.of_int subtrahend)
+  ;;
 
   let get_bit netaddr index =
     N.(
        (compare (logand (shift_right netaddr Pervasives.(bits - index)) one) one) == 0
     )
+  ;;
 
   let to_bin_list address =
     let rec extract_lsb i value =
@@ -89,6 +95,7 @@ module MakeAddress (N:Stdint.Int) = struct
         N.to_int (N.logand N.one value) :: (extract_lsb Pervasives.(i-1) next_value)
       in
     List.rev (extract_lsb N.bits address)
+  ;;
   
   let of_bin_list bin_list = 
     if Pervasives.((List.length bin_list) > N.bits) then None
@@ -105,9 +112,9 @@ module MakeAddress (N:Stdint.Int) = struct
     ) N.one bin_list)
     with
       Parser_error _ -> None
+  ;;
     
   let of_bytes_big_endian = N.of_bytes_big_endian
-  
 end
 
 module MakeRange (A:Address) = struct
@@ -118,18 +125,30 @@ module MakeRange (A:Address) = struct
       Some {r_first = first; r_last = last}
     else
       None
+  ;;
 
   let to_string range =
     (A.to_string range.r_first) ^ "-" ^ (A.to_string range.r_last)
+  ;;
+
+  let serialize t range =
+    let open Faraday in
+    A.serialize t range.r_first; 
+    write_char t '-'; 
+    A.serialize t range.r_last
+  ;;
 
   let get_address range = 
     range.r_first
+  ;;
 
   let get_last_address range = 
     range.r_last
+  ;;
 
   let size range =
     A.sub range.r_last range.r_first
+  ;;
 
   let contains range address =
     if (A.compare range.r_first address) <= 0 &&
@@ -137,9 +156,11 @@ module MakeRange (A:Address) = struct
       true
     else
       false
+  ;;
 
   let contains_range range1 range2 =
     contains range1 range2.r_first && contains range1 range2.r_last
+  ;;
 end
 
 module MakeNetwork (A:Address) = struct
@@ -147,15 +168,26 @@ module MakeNetwork (A:Address) = struct
 
   let get_address n =
     n.n_first
+  ;;
 
   let get_last_address n =
     n.n_last
+  ;;
 
   let to_string network =
     A.to_string network.n_first ^ "/" ^ string_of_int network.prefix_len
+  ;;
+
+  let serialize t network =
+    let open Faraday in
+    A.serialize t network.n_first; 
+    write_char t '/'; 
+    write_string t (string_of_int network.prefix_len)
+  ;;
 
   let prefix_len network =
     network.prefix_len
+  ;;
 
   let make first prefix_len =
     let network_size_bits = A.bit_size - prefix_len in
@@ -166,6 +198,7 @@ module MakeNetwork (A:Address) = struct
       Some {n_first= first; n_last=last; prefix_len= prefix_len}
     else 
       None
+  ;;
 
   let contains network address =
     if (A.compare network.n_first address) <= 0 &&
@@ -173,9 +206,11 @@ module MakeNetwork (A:Address) = struct
       true
     else
       false
+  ;;
 
   let contains_network network subnet =
     contains network subnet.n_first && contains network subnet.n_last
+  ;;
 end
 
 
@@ -225,6 +260,28 @@ module Eui48 = struct
       let b6 = logand (shift_right netaddr 40) mask_8lsb in
       (uint_to_hex b6 ^":"^ uint_to_hex b5 ^":"^ uint_to_hex b4 ^":"^ uint_to_hex b3 ^":"^ uint_to_hex b2 ^":"^ uint_to_hex b1)
     )
+  
+  let serialize t netaddr =
+    let open Faraday in
+    Uint48.(
+      let b1 = logand netaddr mask_8lsb in
+      let b2 = logand (shift_right netaddr 8) mask_8lsb in
+      let b3 = logand (shift_right netaddr 16) mask_8lsb in
+      let b4 = logand (shift_right netaddr 24) mask_8lsb in
+      let b5 = logand (shift_right netaddr 32) mask_8lsb in
+      let b6 = logand (shift_right netaddr 40) mask_8lsb in
+      write_string t (uint_to_hex b6);
+      write_char t ':';
+      write_string t (uint_to_hex b5);
+      write_char t ':';
+      write_string t (uint_to_hex b4);
+      write_char t ':';
+      write_string t (uint_to_hex b3);
+      write_char t ':';
+      write_string t (uint_to_hex b2);
+      write_char t ':';
+      write_string t (uint_to_hex b1);
+    )
 
   let of_int = Uint48.of_int
   let to_int = Uint48.to_int
@@ -268,6 +325,22 @@ module IPv4 = struct
         let b2 = logand (shift_right netaddr 16) mask_8lsb in
         let b3 = logand (shift_right netaddr 24) mask_8lsb in
         (to_string b3 ^"."^ to_string b2 ^"."^ to_string b1 ^"."^ to_string b0)
+      )
+
+    let serialize t netaddr =
+      let open Faraday in
+      Uint32.(
+        let b0 = logand netaddr mask_8lsb in
+        let b1 = logand (shift_right netaddr 8) mask_8lsb in
+        let b2 = logand (shift_right netaddr 16) mask_8lsb in
+        let b3 = logand (shift_right netaddr 24) mask_8lsb in
+        write_string t (to_string b3);
+        write_char t '.';
+        write_string t (to_string b2);
+        write_char t '.'; 
+        write_string t (to_string b1);
+        write_char t '.';
+        write_string t (to_string b0);
       )
 
     let of_int = Uint32.of_int
@@ -447,6 +520,93 @@ module IPv6 = struct
             String.concat ":" part1 ^ "::" ^ String.concat ":" part2
           end
 
+    type either =
+    | Value of int
+    | Streak of int
+
+    let serialize t netaddr =
+      (* [@tailcall] *)
+      let rec detect_streak (lso: int option) (cso: int option) (r: either list) (i: int list) : int option * either list =
+        match i with
+        | [] ->
+        begin
+          match lso, cso with
+          | None   , Some _                            ->  cso, r
+          | Some ls, Some cs when Pervasives.(cs > ls) ->  cso, r
+          | None   , None                              -> None, r
+          | Some _ , None                              ->  lso, r
+          | Some _ , Some _                            ->  lso, r
+        end
+        | ni :: ri -> 
+        begin
+          let vi = Uint128.(to_int (logand (shift_right netaddr ni) mask_16lsb)) in
+          if vi = 0 then
+            match lso, cso with
+            | None  , None    -> detect_streak None (Some 1) r ri
+            | Some _, None    -> detect_streak lso  (Some 1) r ri
+            | None  , Some cs -> detect_streak None (Some (cs + 1)) r ri
+            | Some _, Some cs -> detect_streak lso  (Some (cs + 1)) r ri
+          else
+            match lso, cso with
+            | None   , None                              -> detect_streak None None ((Value vi) :: r) ri
+            | Some _ , None                              -> detect_streak  lso None ((Value vi) :: r) ri
+            | None   , Some cs                           -> detect_streak  cso None ((Value vi) :: (Streak cs) :: r) ri
+            | Some ls, Some cs when Pervasives.(cs > ls) -> detect_streak  cso None ((Value vi) :: (Streak cs) :: r) ri
+            | Some ls, Some _                            -> detect_streak  lso None ((Value vi) :: (Streak ls) :: r) ri
+        end
+        in
+      let rec combine (rlso: int option) (rl: either list) first =
+        let open Faraday in
+        match rl with
+        | [] -> ()
+        | head :: tails ->
+            match rlso, head, first with
+            | None,    Streak _ , _               -> raise (Parser_error "ERROR: found streak where none should be.")
+            | None,     Value v, true            -> 
+            begin
+                write_string t (string_of_int v);
+                combine None tails false
+            end
+            | None,     Value v, false           -> 
+            begin
+                write_char t ':';
+                write_string t (string_of_int v);
+                combine None tails false
+            end
+            | Some ls, Streak sl, _ when ls = sl -> 
+            begin
+                write_char t ':';
+                combine None tails false
+            end
+            | Some ls, Streak sl, _ -> 
+            begin
+                let rec print_streak tsl =
+                    if tsl = 0 then
+                        write_string t "0"
+                    else
+                    (
+                        write_string t "0:";
+                        print_streak (tsl - 1)
+                    )
+                    in
+                print_streak sl;
+                combine rlso tails first
+            end
+            | Some _,   Value v, true            ->
+            begin
+                write_string t (string_of_int v);
+                combine rlso tails false
+            end
+            | Some _,   Value v, false           ->
+            begin
+                write_char t ':';
+                write_string t (string_of_int v);
+                combine rlso tails false
+            end
+            in
+      let min_streak, value_list = detect_streak None None [] shift_list in
+      combine min_streak value_list true
+
     let of_ipv4_address ipv4_address =
       let ipv4_value = Uint128.of_uint32 ipv4_address in
       Uint128.logor mask_third_16lsb ipv4_value
@@ -488,12 +648,14 @@ module IPv6 = struct
     let of_string network_string =
       let network_string_len = String.length network_string in
       if Pervasives.(network_string_len > Netaddress_parser.IPv6.max_str_length_network 
-                  || network_string_len < Netaddress_parser.IPv6.max_str_length_network) then
-        None
+                  || network_string_len < Netaddress_parser.IPv6.min_str_length_network) then
+                  (
+        Printf.printf "ERROR: string of wrong size"; None
+                  )
       else
         let network_range = Angstrom.parse_string Netaddress_parser.IPv6.parser_network network_string in
         match network_range with
-        | Result.Error _ -> None
+        | Result.Error e -> Printf.printf "ERROR: %s" e; None
         | Result.Ok (parsed_network_address, prefix_len) ->
           let network_address_opt = Address.of_parsed_value parsed_network_address in
           match network_address_opt with
