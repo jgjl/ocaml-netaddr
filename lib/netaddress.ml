@@ -229,6 +229,14 @@ module Eui48 = struct
     String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
   ;;
 
+  let of_strings b1 b2 b3 b4 b5 b6 =
+    (int_of_string b6) lor
+    (((int_of_string b5) lsl 8) lor
+    (((int_of_string b4) lsl 16) lor
+    (((int_of_string b3) lsl 24) lor
+    (((int_of_string b2) lsl 32) lor
+    ((int_of_string b1) lsl 40)))))
+
   let of_parsed_value (b1, b2, b3, b4, b5, b6) =
     Uint48.(
       logor (of_int b6)
@@ -306,6 +314,12 @@ module IPv4 = struct
               (logor (shift_left (of_int b3) 8)
               (logor (shift_left (of_int b2) 16)
                     (shift_left (of_int b1) 24))))
+
+    let of_strings b1 b2 b3 b4 =
+         ((int_of_string b4) lor
+        (((int_of_string b3) lsl 8) lor
+        (((int_of_string b2) lsl 16) lor
+         ((int_of_string b1) lsl 24))))
 
     let of_string s =
       Pervasives.(
@@ -578,7 +592,7 @@ module IPv6 = struct
                 write_char t ':';
                 combine None tails false
             end
-            | Some ls, Streak sl, _ -> 
+            | Some _, Streak sl, _ -> 
             begin
                 let rec print_streak tsl =
                     if tsl = 0 then

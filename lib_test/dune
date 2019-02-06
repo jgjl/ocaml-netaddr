@@ -1,12 +1,13 @@
 (test
- (name test)
+ (name      test)
  (libraries alcotest netaddress)
- (modules test test_ipv4 test_ipv6)
+ (modules   test test_ipv4 test_ipv6)
+ (modes     native)
  )
 
 (executable
- (name benchmark_ipv6parse)
+ (name      benchmark_ipv6parse)
  (libraries angstrom result stdint netaddress benchmark)
- (modules benchmark_ipv6parse)
- (modes native)
+ (modules   benchmark_ipv6parse)
+ (modes     native)
  )

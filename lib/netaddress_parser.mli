@@ -7,6 +7,7 @@ val read_byte_hex : string Angstrom.t
 val read_16bit_hex : string Angstrom.t
 val read_16bit_hex_1 : string Angstrom.t
 val read_16bit_hex_2 : string Angstrom.t
+val read_16bit_hex_4 : string Angstrom.t
 val read_16bit_hex_3 : int Angstrom.t
 
 module Eui48 : sig
@@ -37,8 +38,11 @@ module IPv4 : sig
      * Get a parser for IPv4 dotted quad notation
      *)
     val parser_address : parsed_value Angstrom.t
+    val parser_address_2 : (string -> string -> string -> string -> 'a) -> 'a Angstrom.t
     val parser_range : (parsed_value * parsed_value) Angstrom.t
+    val parser_range_2 : (string -> string -> string -> string -> 'a) -> ('a -> 'a -> 'b) -> 'b Angstrom.t
     val parser_network : (parsed_value * parsed_value_prefix) Angstrom.t
+    val parser_network_2 : (string -> string -> string -> string -> 'a) -> ('a -> string -> 'b) -> 'b Angstrom.t
 end
 
 module IPv6 : sig
@@ -55,6 +59,7 @@ module IPv6 : sig
 
     val parser_value_part_1 : (string list * string list) Angstrom.t
     val parser_value_part_2 : (string list * string list) Angstrom.t
+    val parser_value_part_3 : (string list * string list) Angstrom.t
     (*
      * Get a parser for IPv6 coloned octuple notation
      *)

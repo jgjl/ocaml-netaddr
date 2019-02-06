@@ -40,6 +40,7 @@ module Eui48 :
     val sub : a -> a -> a
     val get_bit : a -> int -> bool
     val of_string : string -> a option
+    val of_strings : string -> string -> string -> string -> string -> string -> int
     val to_string : a -> string
     val to_string_bin : a -> string
     val to_string_oct : a -> string
@@ -63,13 +64,13 @@ module IPv4 :
         val zero : a
         val one : a
         val max : a
-        val logand : t -> t -> t
-        val logor : t -> t -> t
-        val logxor : t -> t -> t
-        val lognot : t -> t
-        val shift_left : t -> int -> t
-        val shift_right : t -> int -> t
-        val compare : t -> t -> int
+        val logand : a -> a -> a
+        val logor : a -> a -> a
+        val logxor : a -> a -> a
+        val lognot : a -> a
+        val shift_left : a -> int -> a
+        val shift_right : a -> int -> a
+        val compare : a -> a -> int
         val ( < ) : a -> a -> bool
         val ( > ) : a -> a -> bool
         val add_int : a -> int -> a
@@ -78,6 +79,7 @@ module IPv4 :
         val sub : a -> a -> a
         val get_bit : a -> int -> bool
         val of_string : string -> a option
+        val of_strings : string -> string -> string -> string -> int
         val to_string : a -> string
         val to_string_bin : a -> string
         val to_string_oct : a -> string
@@ -95,20 +97,20 @@ module IPv4 :
     module Range :
       sig
         type r
-        val make : t -> t -> r option
+        val make : Address.a -> Address.a -> r option
         val of_string : string -> r option
         val to_string : r -> string
         val serialize : Faraday.t -> r -> unit
         val get_address : r -> Address.a
         val get_last_address : r -> Address.a
-        val size : r -> t
+        val size : r -> Address.a
         val contains : r -> Address.a -> bool
         val contains_range : r -> r -> bool
       end
     module Network :
       sig
         type n
-        val make : t -> int -> n option
+        val make : Address.a -> int -> n option
         val of_string : string -> n option
         val to_string : n -> string
         val serialize : Faraday.t -> n -> unit

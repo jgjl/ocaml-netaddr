@@ -1,5 +1,5 @@
 
-open Stdint
+(* open Stdint *)
 open Angstrom
 
 let rec at_most m p =
@@ -7,11 +7,11 @@ let rec at_most m p =
     Contributed by seliopou
     https://github.com/inhabitedtype/angstrom/issues/110
   *)
-  if m = 0
-  then return []
+  if m = 0 then 
+    return []
   else
     (lift2 (fun x xs -> x :: xs) p (at_most (m - 1) p))
-    <|> return []
+    (* <|> return [] *)
 ;;
 
 let limits n m p =
@@ -68,11 +68,11 @@ let is_all_hexdigits =
     | _ -> false
 ;;
 
-let end_of_string = 
+(* let end_of_string = 
     peek_char
     >>= function
         | None | Some '.' -> return ()
-        | Some c -> fail ("end_of_string, next char: " ^ (String.make 1 c))
+        | Some c -> fail ("end_of_string, next char: " ^ (String.make 1 c)) *)
 ;;
 
 (*
@@ -100,7 +100,7 @@ let read_5bit_dec =
         | R5BDS_r_02,  '0' .. '2' -> Some R5BDS_end
         | _, _ -> None
         )) >>= function 
-                | result, R5BDS_start -> fail "Could not read 5bit value"
+                | _, R5BDS_start -> fail "Could not read 5bit value"
                 | result, _ -> return result 
 ;;
 
@@ -111,7 +111,7 @@ type read_7bit_dec_state =
 | R7BDS_start
 | R7BDS_1
 | R7BDS_1_2
-| R7BDS_2_5
+(* | R7BDS_2_5 *)
 | R7BDS_r_09
 | R7BDS_end
 
@@ -133,7 +133,7 @@ let read_7bit_dec =
         | R7BDS_r_09,  '0' .. '9' -> Some R7BDS_end
         | _, _ -> None
         )) >>= function 
-                | result, R7BDS_start -> fail "Could not read 7bit value"
+                | _, R7BDS_start -> fail "Could not read 7bit value"
                 | result, _ -> return result 
 ;;
 
@@ -169,7 +169,7 @@ let read_byte_dec =
         | RBDS_2_5,   '0' .. '5' -> Some RBDS_end
         | _, _ -> None
         )) >>= function 
-                | result, RBDS_start -> fail "Could not read byte value"
+                | _, RBDS_start -> fail "Could not read byte value"
                 | result, _ -> return result 
 ;;
 
@@ -189,7 +189,7 @@ let read_byte_hex =
         | RBHS_first, '0' .. 'f' -> Some RBHS_end
         | _, _ -> None
         )) >>= function 
-                | result, RBHS_start -> fail "Could not read byte value"
+                | _, RBHS_start -> fail "Could not read byte value"
                 | result, _ -> return result 
 ;;
 
@@ -206,23 +206,40 @@ let read_16bit_hex_1 =
 ;;
 
 let read_16bit_hex_2 = 
-  (scan_string 4 
-    (fun state c -> 
-        match state, c with
-        | 4, '0' .. 'f' -> Some 3
-        | 3, '0' .. 'f' -> Some 2
-        | 2, '0' .. 'f' -> Some 1
-        | 1, '0' .. 'f' -> None
-        | _, _ -> None
-        )
-    ) 
+    (* lift2 (fun f r -> ) *)
+    (scan_string 4 
+        (fun state c -> 
+            match state, c with
+            | 4, '0' .. '9' | 4, 'a' .. 'f' | 4, 'A' .. 'F' -> Some 3
+            | 3, '0' .. '9' | 3, 'a' .. 'f' | 3, 'A' .. 'F' -> Some 2
+            | 2, '0' .. '9' | 2, 'a' .. 'f' | 2, 'A' .. 'F' -> Some 1
+            | 1, '0' .. '9' | 1, 'a' .. 'f' | 1, 'A' .. 'F' -> Some 0
+            | _, _ -> None
+            )
+        ) (* >>=
+            function 
+            | "" -> fail "Empty"
+            | v -> return v *)
+;;
+
+let read_16bit_hex_4 = 
+    (scan_string 4 
+        (fun n c -> 
+            if n < 1 then
+                None
+            else 
+                match c with
+                | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> Some (n - 1)
+                | _ -> None
+            )
+    )
 ;;
 
 let read_16bit_hex_3 = 
   lift (fun cl -> List.fold_left (fun r c -> (r lsl 4) + (int_of_char c)) 0 cl) (at_most 4 (satisfy is_all_hexdigits))
 ;;
 
-let read_16bit_hex = read_16bit_hex_1
+let read_16bit_hex = read_16bit_hex_2
 
 module Eui48 = struct
     type parsed_value = int * int * int * int * int * int
@@ -232,9 +249,9 @@ module Eui48 = struct
 
     let max_str_length_address = 17
 
-    let stringbytes_to_list b1 b2 b3 b4 b5 b6 =
+    (* let stringbytes_to_list b1 b2 b3 b4 b5 b6 =
         [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4; int_of_string b5; int_of_string b6]
-    ;;
+    ;; *)
 
     let parser_eui48_part =
         lift4 (fun b1 b2 b3 b4 b5 b6 -> 
@@ -258,7 +275,7 @@ module Eui48 = struct
         parser_eui48_part <* end_of_input
     ;;
 
-    let parse_eui48 eui48_string =
+    (* let parse_eui48 eui48_string =
         match parse_string parser_address eui48_string with
         | Result.Ok (b1,b2,b3,b4,b5,b6) -> 
                         string_of_int b1 ^ ":" ^ 
@@ -268,7 +285,7 @@ module Eui48 = struct
                         string_of_int b5 ^ ":" ^ 
                         string_of_int b6
         | Result.Error message -> message
-    ;;
+    ;; *)
 end
 
 
@@ -284,9 +301,9 @@ module IPv4 = struct
     let max_str_length_range = 31
     let max_str_length_network = 18
 
-    let stringbytes_to_list b1 b2 b3 b4 =
+    (* let stringbytes_to_list b1 b2 b3 b4 =
         [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4]
-    ;;
+    ;; *)
 
     let parser_ipv4_part =
         (lift4
@@ -297,8 +314,21 @@ module IPv4 = struct
         read_byte_dec)
     ;;
 
+    let parser_ipv4_part_2 a_make_fun =
+        (lift4
+        a_make_fun
+        (read_byte_dec <* (skip is_dot))
+        (read_byte_dec <* (skip is_dot))
+        (read_byte_dec <* (skip is_dot))
+        read_byte_dec)
+    ;;
+
     let parser_address = 
         parser_ipv4_part <* end_of_input
+    ;;
+
+    let parser_address_2 a_make_fun = 
+        (parser_ipv4_part_2 a_make_fun) <* end_of_input
     ;;
 
     let parser_range =
@@ -307,16 +337,27 @@ module IPv4 = struct
         (parser_ipv4_part <* end_of_input)
     ;;
 
+    let parser_range_2 a_make_fun r_make_fun =
+        lift2 r_make_fun
+        ((parser_ipv4_part_2 a_make_fun) <* char '-')
+        ((parser_ipv4_part_2 a_make_fun) <* end_of_input)
+    ;;
+
     let parser_network =
         lift2 (fun network_value prefix_len -> (network_value, int_of_string prefix_len))
         (parser_ipv4_part <* char '/')
         (read_5bit_dec <* end_of_input)
+
+    let parser_network_2 a_make_fun n_make_fun =
+        lift2 n_make_fun
+        ((parser_ipv4_part_2 a_make_fun) <* char '/')
+        (read_5bit_dec <* end_of_input)
     ;;
 
-    let parse_ipv4 ipv4_string =
+    (* let parse_ipv4 ipv4_string =
         match parse_string parser_address ipv4_string with
         | Result.Ok (b1,b2,b3,b4) -> (string_of_int b1) ^ "." ^ string_of_int b2 ^ "." ^ string_of_int b3 ^ "." ^ string_of_int b4
-        | Result.Error message -> message
+        | Result.Error message -> message *)
     ;;
 end
 
@@ -333,7 +374,6 @@ module IPv6 = struct
     let max_str_length_network = 43
 
     let int_of_hex_string s =
-        Printf.printf "Bidde: -%s-" s;
         int_of_string ("0x" ^ s)
     ;;
 
@@ -345,13 +385,62 @@ module IPv6 = struct
         (string ":")
     ;;
 
+
+    type ps =
+    | PS_Start
+    | PS_bdc of int
+    | PS_adc of int
+    | PS_End
+
+    let parser_value_part_2 =
+        print_endline "fun called";
+        let rec parse state (bdc, adc) =
+            match state with
+            | PS_Start -> 
+            begin
+                print_endline "PS_Start";
+                read_16bit_hex_2 <* (satisfy is_colon) >>=
+                    function 
+                    | "" -> fail "Start: Empty"
+                    | v -> parse (PS_bdc 1) ([v], adc)
+            end
+            | PS_bdc n when n < 7 -> 
+            begin
+                Printf.printf "PS_bdc %d < 7\n" n;
+                read_16bit_hex_2 <* (satisfy is_colon) >>=
+                    function 
+                    | "" -> parse (PS_adc (n + 1)) (bdc, adc)
+                    | v -> parse (PS_bdc (n + 1)) (v :: bdc, adc)
+            end
+            | PS_bdc n when n = 7 -> 
+            begin
+                Printf.printf "PS_bdc %d = 7\n" n;
+                read_16bit_hex_2 >>=
+                    function 
+                    | "" -> fail "Bdc: Empty"
+                    | v -> parse PS_End (v :: bdc, adc)
+            end
+            | PS_adc n when n < 7 -> 
+            begin
+                Printf.printf "PS_adc %d < 6\n" n;
+                (satisfy is_colon) *> read_16bit_hex_2 >>=
+                    function 
+                    | "" -> fail "Adc: Empty"
+                    | v -> parse (PS_adc (n + 1)) (bdc, v :: adc)
+            end
+            | PS_adc _ | PS_bdc _ -> fail "Adc: wrong char"
+            | PS_End _ -> return (List.rev bdc, List.rev adc)
+            in
+        parse PS_Start ([], [])
+                
     type parse_state = 
     | Start
     | Before_dc of int
     | After_dc of int * int
-    | End
+    | End 
 
-    let parser_value_part_2 =
+
+    let parser_value_part_3 =
         let rec parse state (bdc, adc) =
             match state with
             | Start -> 
@@ -360,7 +449,7 @@ module IPv6 = struct
                     (fun v ->
                         parse (Before_dc 1) (v :: bdc, adc)))
                 <|> ((satisfy is_colon) >>=
-                    (fun v ->
+                    (fun _ ->
                         parse (After_dc (0, 0)) (bdc, adc)))
             end 
             | Before_dc bn when bn < 7 ->
@@ -371,26 +460,29 @@ module IPv6 = struct
                 <|> ((satisfy is_colon) *> read_16bit_hex >>=
                     (fun v ->
                         parse (After_dc (bn, 1)) (bdc, v :: adc)))
+                <|> ((satisfy is_colon) >>=
+                (fun _ -> parse End (bdc, adc)))
             end
             | Before_dc bn when bn = 8 ->
             begin
                 read_16bit_hex >>=
                     (fun v ->
-                        return (v :: bdc, []))
+                        parse End (v :: bdc, []))
             end
             | After_dc (bn, an) when bn + an < 7 ->
             begin
                 ((satisfy is_colon) *> read_16bit_hex) >>=
                     (fun v ->
                         parse (After_dc (bn, (an + 1))) (bdc, v :: adc))
+                <|> ((satisfy is_colon) >>=
+                (fun _ -> parse End (bdc, adc)))
             end
-            (* | End -> return (bdc, adc) *)
-            | _ -> return (bdc, adc)
+            | _ -> return (List.rev bdc, List.rev adc)
             in
         parse Start ([],[])
     ;;
 
-    let parser_value_part = parser_value_part_1
+    let parser_value_part = parser_value_part_2
 
     let parser_address =
         lift (fun (part1, part2) -> (List.map int_of_hex_string part1, List.map int_of_hex_string part2))

@@ -5,5 +5,5 @@
    (modules     netaddress netaddress_parser)
    (wrapped     false)
    (synopsis    "A clone of Python's netaddr")
-   (modes native)
+   (modes       native)
 )
