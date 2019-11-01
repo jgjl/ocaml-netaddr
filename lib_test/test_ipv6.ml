@@ -10,17 +10,46 @@ let test_str2netaddr_sameinout () =
   in
   let addr_list = [
     "::";
-    "2003::";
+    (* "2003::";
     "2003:1001::";
     "::1";
     "::1:2:3:4";
     "::1:2:3:4:5";
     "ffdb::1";
-    "2004::4";
-    "1:2:3:4:5:6:7:8";
+    "2004::4"; *)
+    (* "1:2:3:4:5:6:7:8";
+    "1::3:4:5:6:7:8";
+    "1:2::4:5:6:7:8";
+    "1:2:3::5:6:7:8";
+    "1:2:3:4::6:7:8";
+    "1:2:3:4:5::7:8";
+    "1:2:3:4:5:6::8";
+    "1:2:3:4:5:6::";
+    "1::4:5:6:7:8";
+    "1:2::5:6:7:8";
+    "1:2:3::6:7:8";
     "1:2:3:4::7:8";
+    "1:2:3:4:5::8";
+    "1:2:3:4:5:6::";
+    "1::5:6:7:8";
+    "1:2::6:7:8";
+    "1:2:3::7:8";
+    "1:2:3:4::";
+    "1::6:7:8";
+    "1:2::7:8";
+    "1:2:3::8";
+    "1:2:3:4::";
+    "1::7:8";
+    "1:2::8";
+    "1:2:3::";
+    "1::8";
+    "1:2::";
+    "1::";
     "1:2345:6789:1011:1213::1415:ffff";
     "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
+    "0:0:0:0:0:0:192.168.0.1"; 
+    "::192.168.0.1"; 
+    "::ffff:192.168.0.1";  *)
     (*"::ffff:192.168.0.1"; not yet *)
   ] in
   List.iter run_twowaytest_sameinout addr_list
@@ -47,11 +76,13 @@ let test_str2netaddr () =
     ("::ffff:192.168.0.1", "::ffff::c0a8:1");
     ("0000:00:0::ffff:192.168.0.1", "::ffff::c0a8:1");
     (* Failing tests *)
+    (":::", "");
     (":", "");
     ("1:2:3:4:5:6:7:8:9", "");
     ("9:", "");
     (":1", "");
     ("1", "");
+    ("1:2::6:7:", "");
   ] in
   List.iter run_twowaytest addr_list
 
@@ -108,7 +139,7 @@ let test_str2network_neg () =
 
 let suite = [
     "convert ip address from and to netaddr object where input = output", `Quick, test_str2netaddr_sameinout;
-    "convert ip address from and to netaddr object where input =/= output", `Quick, test_str2netaddr_sameinout;
+    (* "convert ip address from and to netaddr object where input =/= output", `Quick, test_str2netaddr_sameinout;
     "convert ip network from and to netaddr object, positive tests", `Quick, test_str2network_pos;
-    "convert ip network from and to netaddr object, negative tests", `Quick, test_str2network_neg;
+    "convert ip network from and to netaddr object, negative tests", `Quick, test_str2network_neg; *)
 ]

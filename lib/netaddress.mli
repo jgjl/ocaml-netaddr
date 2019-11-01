@@ -18,47 +18,26 @@ Ideas
 exception Result_out_of_range of string
 exception Parser_error of string
 
-module Eui48 :
-  sig
-    type a
-    val bit_size : int
-    val zero : a
-    val one : a
-    val max : a
-    val logand : a -> a -> a
-    val logor : a -> a -> a
-    val logxor : a -> a -> a
-    val lognot : a -> a
-    val shift_left : a -> int -> a
-    val shift_right : a -> int -> a
-    val compare : a -> a -> int
-    val ( < ) : a -> a -> bool
-    val ( > ) : a -> a -> bool
-    val add_int : a -> int -> a
-    val sub_int : a -> int -> a
-    val add : a -> a -> a
-    val sub : a -> a -> a
-    val get_bit : a -> int -> bool
-    val of_string : string -> a option
-    val of_strings : string -> string -> string -> string -> string -> string -> int
-    val to_string : a -> string
-    val to_string_bin : a -> string
-    val to_string_oct : a -> string
-    val to_string_hex : a -> string
-    val serialize : Faraday.t -> a -> unit
-    val of_bin_list : int list -> a option
-    val to_bin_list : a -> int list
-    val of_int : int -> a
-    val to_int : a -> int
-    val of_bytes_big_endian : Bytes.t -> int -> a
-    val of_std_uint48 : Stdint.uint48 -> a
-  end
+module Parse_helper :
+    sig
+        (* Read 8, 7, or 5 bit values in decimal or hex encoding *)
+        val read_5bit_dec : string Angstrom.t
+        val read_7bit_dec : string Angstrom.t
+        val read_byte_dec : string Angstrom.t
+        val read_byte_hex : string Angstrom.t
+        val read_16bit_hex : string Angstrom.t
+        val read_16bit_hex_1 : string Angstrom.t
+        val read_16bit_hex_2 : string Angstrom.t
+        val read_16bit_hex_4 : string Angstrom.t
+        val read_16bit_hex_7 : string Angstrom.t
+        val read_16bit_hex_5 : string Angstrom.t
+        val read_16bit_hex_6 : int -> int -> int Angstrom.t
+        val read_16bit_hex_3 : int Angstrom.t
+        val read_16bit_hex_8 : int Angstrom.t
+    end
 
-module IPv4 :
-  sig
-    type t
-    module Address :
-      sig
+module Eui48 :
+    sig
         type a
         val bit_size : int
         val zero : a
@@ -79,7 +58,7 @@ module IPv4 :
         val sub : a -> a -> a
         val get_bit : a -> int -> bool
         val of_string : string -> a option
-        val of_strings : string -> string -> string -> string -> int
+        val of_strings : string -> string -> string -> string -> string -> string -> int
         val to_string : a -> string
         val to_string_bin : a -> string
         val to_string_oct : a -> string
@@ -89,99 +68,147 @@ module IPv4 :
         val to_bin_list : a -> int list
         val of_int : int -> a
         val to_int : a -> int
-        val of_int32 : int32 -> a
-        val to_int32 : a -> int32
-        val of_std_uint32 : Stdint.uint32 -> a
         val of_bytes_big_endian : Bytes.t -> int -> a
-      end
-    module Range :
-      sig
-        type r
-        val make : Address.a -> Address.a -> r option
-        val of_string : string -> r option
-        val to_string : r -> string
-        val serialize : Faraday.t -> r -> unit
-        val get_address : r -> Address.a
-        val get_last_address : r -> Address.a
-        val size : r -> Address.a
-        val contains : r -> Address.a -> bool
-        val contains_range : r -> r -> bool
-      end
-    module Network :
-      sig
-        type n
-        val make : Address.a -> int -> n option
-        val of_string : string -> n option
-        val to_string : n -> string
-        val serialize : Faraday.t -> n -> unit
-        val get_address : n -> Address.a
-        val get_last_address : n -> Address.a
-        val prefix_len : n -> int
-        val contains : n -> Address.a -> bool
-        val contains_network : n -> n -> bool
-      end
-  end
+        val of_std_uint48 : Stdint.uint48 -> a
+    end
+
+module IPv4 :
+    sig
+        type t
+        module Address :
+        sig
+            type a
+            val bit_size : int
+            val zero : a
+            val one : a
+            val max : a
+            val logand : a -> a -> a
+            val logor : a -> a -> a
+            val logxor : a -> a -> a
+            val lognot : a -> a
+            val shift_left : a -> int -> a
+            val shift_right : a -> int -> a
+            val compare : a -> a -> int
+            val ( < ) : a -> a -> bool
+            val ( > ) : a -> a -> bool
+            val add_int : a -> int -> a
+            val sub_int : a -> int -> a
+            val add : a -> a -> a
+            val sub : a -> a -> a
+            val get_bit : a -> int -> bool
+            val of_string : string -> a option
+            val of_strings : string -> string -> string -> string -> int
+            val to_string : a -> string
+            val to_string_bin : a -> string
+            val to_string_oct : a -> string
+            val to_string_hex : a -> string
+            val serialize : Faraday.t -> a -> unit
+            val of_bin_list : int list -> a option
+            val to_bin_list : a -> int list
+            val of_int : int -> a
+            val to_int : a -> int
+            val of_int32 : int32 -> a
+            val to_int32 : a -> int32
+            val of_std_uint32 : Stdint.uint32 -> a
+            val of_bytes_big_endian : Bytes.t -> int -> a
+        end
+        module Range :
+        sig
+            type r
+            val make : Address.a -> Address.a -> r option
+            val of_string : string -> r option
+            val to_string : r -> string
+            val serialize : Faraday.t -> r -> unit
+            val get_address : r -> Address.a
+            val get_last_address : r -> Address.a
+            val size : r -> Address.a
+            val contains : r -> Address.a -> bool
+            val contains_range : r -> r -> bool
+        end
+        module Network :
+        sig
+            type n
+            val make : Address.a -> int -> n option
+            val of_string : string -> n option
+            val to_string : n -> string
+            val serialize : Faraday.t -> n -> unit
+            val get_address : n -> Address.a
+            val get_last_address : n -> Address.a
+            val prefix_len : n -> int
+            val contains : n -> Address.a -> bool
+            val contains_network : n -> n -> bool
+        end
+    end
 
 module IPv6 : sig
     type t
+    module Parser:
+        sig
+            val parser_value_part_1 : (string list * string list) Angstrom.t
+            val parser_value_part_2 : (string list * string list) Angstrom.t
+            val parser_value_part_4 : (int list * int list) Angstrom.t
+            val parser_value_part_5 : (string list * string list) Angstrom.t
+            val parser_value_part_3 : (string list * string list) Angstrom.t
+            val parser_value_part_6 : (int list * int list) Angstrom.t
+        end
     module Address :
-      sig
-        type a
-        val bit_size : int
-        val zero : a
-        val one : a
-        val max : a
-        val logand : t -> t -> t
-        val logor : t -> t -> t
-        val logxor : t -> t -> t
-        val lognot : t -> t
-        val shift_left : t -> int -> t
-        val shift_right : t -> int -> t
-        val compare : t -> t -> int
-        val ( < ) : a -> a -> bool
-        val ( > ) : a -> a -> bool
-        val add_int : a -> int -> a
-        val sub_int : a -> int -> a
-        val add : a -> a -> a
-        val sub : a -> a -> a
-        val get_bit : a -> int -> bool
-        val of_string : string -> a option
-        val to_string : a -> string
-        val to_string_bin : a -> string
-        val to_string_oct : a -> string
-        val to_string_hex : a -> string
-        val serialize : Faraday.t -> a -> unit
-        val of_bin_list : int list -> a option
-        val to_bin_list : a -> int list
-        val of_ipv4_address : IPv4.Address.a -> a
-        val to_ipv4_address : a -> IPv4.Address.a option
-        val of_std_uint128 : Stdint.uint128 -> a
-        val of_bytes_big_endian : Bytes.t -> int -> a
-      end
-    module Range :
-      sig
-        type r
-        val make : Address.a -> Address.a -> r option
-        val of_string : string -> r option
-        val to_string : r -> string
-        val serialize : Faraday.t -> r -> unit
-        val get_address : r -> Address.a
-        val get_last_address : r -> Address.a
-        val size : r -> t
-        val contains : r -> Address.a -> bool
-        val contains_range : r -> r -> bool
-      end
-    module Network :
-      sig
-        type n
-        val make : Address.a -> int -> n option
-        val of_string : string -> n option
-        val to_string : n -> string
-        val serialize : Faraday.t -> n -> unit
-        val get_address : n -> Address.a
-        val get_last_address : n -> Address.a
-        val prefix_len : n -> int
-        val contains : n -> Address.a -> bool
-        val contains_network : n -> n -> bool
-      end
-  end
+        sig
+            type a
+            val bit_size : int
+            val zero : a
+            val one : a
+            val max : a
+            val logand : t -> t -> t
+            val logor : t -> t -> t
+            val logxor : t -> t -> t
+            val lognot : t -> t
+            val shift_left : t -> int -> t
+            val shift_right : t -> int -> t
+            val compare : t -> t -> int
+            val ( < ) : a -> a -> bool
+            val ( > ) : a -> a -> bool
+            val add_int : a -> int -> a
+            val sub_int : a -> int -> a
+            val add : a -> a -> a
+            val sub : a -> a -> a
+            val get_bit : a -> int -> bool
+            val of_string : string -> a option
+            val to_string : a -> string
+            val to_string_bin : a -> string
+            val to_string_oct : a -> string
+            val to_string_hex : a -> string
+            val serialize : Faraday.t -> a -> unit
+            val of_bin_list : int list -> a option
+            val to_bin_list : a -> int list
+            val of_ipv4_address : IPv4.Address.a -> a
+            val to_ipv4_address : a -> IPv4.Address.a option
+            val of_std_uint128 : Stdint.uint128 -> a
+            val of_bytes_big_endian : Bytes.t -> int -> a
+        end
+        module Range :
+        sig
+            type r
+            val make : Address.a -> Address.a -> r option
+            val of_string : string -> r option
+            val to_string : r -> string
+            val serialize : Faraday.t -> r -> unit
+            val get_address : r -> Address.a
+            val get_last_address : r -> Address.a
+            val size : r -> t
+            val contains : r -> Address.a -> bool
+            val contains_range : r -> r -> bool
+        end
+        module Network :
+        sig
+            type n
+            val make : Address.a -> int -> n option
+            val of_string : string -> n option
+            val to_string : n -> string
+            val serialize : Faraday.t -> n -> unit
+            val get_address : n -> Address.a
+            val get_last_address : n -> Address.a
+            val prefix_len : n -> int
+            val contains : n -> Address.a -> bool
+            val contains_network : n -> n -> bool
+        end
+    end
