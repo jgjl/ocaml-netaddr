@@ -31,7 +31,7 @@ module Parse_helper :
         val read_16bit_hex_4 : string Angstrom.t
         val read_16bit_hex_7 : string Angstrom.t
         val read_16bit_hex_5 : string Angstrom.t
-        val read_16bit_hex_6 : int -> int -> int Angstrom.t
+        (* val read_16bit_hex_6 : int -> int -> int Angstrom.t *)
         val read_16bit_hex_3 : int Angstrom.t
         val read_16bit_hex_8 : int Angstrom.t
     end
@@ -149,7 +149,7 @@ module IPv6 : sig
             val parser_value_part_4 : (int list * int list) Angstrom.t
             val parser_value_part_5 : (string list * string list) Angstrom.t
             val parser_value_part_3 : (string list * string list) Angstrom.t
-            val parser_value_part_6 : (int list * int list) Angstrom.t
+            (* val parser_value_part_6 : (int list * int list) Angstrom.t *)
         end
     module Address :
         sig
