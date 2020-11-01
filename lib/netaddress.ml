@@ -370,22 +370,22 @@ module MakeAddress (N:Stdint.Int) = struct
 
     let get_bit netaddr index =
         let open N in
-        (compare (logand (shift_right netaddr Pervasives.(bits - index)) one) one) == 0
+        (compare (logand (shift_right netaddr Stdlib.(bits - index)) one) one) == 0
     ;;
 
     let to_bin_list address =
         let rec extract_lsb i value =
-        if Pervasives.(i = 0) then
+        if Stdlib.(i = 0) then
             []
         else
             let next_value = N.shift_right value 1 in
-            N.to_int (N.logand N.one value) :: (extract_lsb Pervasives.(i-1) next_value)
+            N.to_int (N.logand N.one value) :: (extract_lsb Stdlib.(i-1) next_value)
         in
         List.rev (extract_lsb N.bits address)
     ;;
     
     let of_bin_list bin_list = 
-        if Pervasives.((List.length bin_list) > N.bits) then None
+        if Stdlib.((List.length bin_list) > N.bits) then None
         else
             let two = N.add N.one N.one in
             try Some (List.fold_left (fun a e ->
@@ -547,7 +547,7 @@ module Eui48 = struct
     let uint_to_hex v = 
         let hex_raw = Uint48.to_string_hex v in
         let hex_raw_len = String.length hex_raw in
-        String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
+        String.sub hex_raw 2 Stdlib.(hex_raw_len-2)
     ;;
 
     let of_strings b1 b2 b3 b4 b5 b6 =
@@ -570,12 +570,12 @@ module Eui48 = struct
     ;;
 
     let of_string s =
-        let open Pervasives in
+        let open Stdlib in
         if (String.length s) > max_str_length_address
         || (String.length s) < min_str_length_address then
             None
         else
-            match Angstrom.parse_string parser_address s with
+            match (Angstrom.parse_string ~consume:All parser_address s) with
             | Result.Ok result -> Some (of_parsed_value result)
             | _ -> None
     ;;
@@ -716,12 +716,12 @@ module IPv4 = struct
         ;;
 
         let of_string s =
-            let open Pervasives in
+            let open Stdlib in
             if (String.length s) > Parser.max_str_length_address
             || (String.length s) < Parser.min_str_length_address then
             None
             else
-            match Angstrom.parse_string Parser.parser_address s with
+            match Angstrom.parse_string ~consume:All Parser.parser_address s with
             | Result.Ok result -> Some (of_parsed_value result)
             | _ -> None
         ;;
@@ -765,11 +765,11 @@ module IPv4 = struct
         include MakeRange(Address)
 
         let of_string s =
-            if Pervasives.((String.length s) > Parser.max_str_length_range
+            if Stdlib.((String.length s) > Parser.max_str_length_range
                         || (String.length s) < Parser.min_str_length_range) then
                 None
             else
-                match Angstrom.parse_string Parser.parser_range s with
+                match Angstrom.parse_string  ~consume:All Parser.parser_range s with
                 | Result.Ok (first_value, last_value) ->
                 make (Address.of_parsed_value first_value) (Address.of_parsed_value last_value)
                 | _ -> None
@@ -781,11 +781,11 @@ module IPv4 = struct
 
         let of_string network_string =
             let network_string_len = String.length network_string in
-            if Pervasives.(network_string_len > Parser.max_str_length_network
+            if Stdlib.(network_string_len > Parser.max_str_length_network
                         || network_string_len < Parser.min_str_length_network) then
                 None
             else
-                let network_range = Angstrom.parse_string Parser.parser_network network_string in
+                let network_range = Angstrom.parse_string ~consume:All Parser.parser_network network_string in
                 match network_range with
                 | Result.Error _ -> None
                 | Result.Ok (parsed_network_address, prefix_len) ->
@@ -1159,7 +1159,7 @@ module IPv6 = struct
         include MakeAddress(Uint128)
 
         let find_first_longest_streak element_selector element_list =
-            let open Pervasives in
+            let open Stdlib in
             let detect_list (i, cur_opt, max_opt) value = 
                 begin
                 let element_selected = element_selector value in
@@ -1208,7 +1208,7 @@ module IPv6 = struct
         ;;
 
         let of_parsed_value (part1, part2) =
-            let open Pervasives in
+            let open Stdlib in
             let missing_length = 8 - ((List.length part1) + (List.length part2)) in
             if missing_length = 0 then
                 Some (ints_to_value (part1 @ part2))
@@ -1219,11 +1219,11 @@ module IPv6 = struct
 
         let of_string ipv6_string =
             let ipv6_string_len = String.length ipv6_string in
-            if Pervasives.(ipv6_string_len > Parser.max_str_length_address 
+            if Stdlib.(ipv6_string_len > Parser.max_str_length_address 
                         || ipv6_string_len < Parser.min_str_length_address) then
                 None
             else
-                let parsed_ipv6 = Angstrom.parse_string Parser.parser_address ipv6_string in
+                let parsed_ipv6 = Angstrom.parse_string ~consume:All Parser.parser_address ipv6_string in
                 match parsed_ipv6 with
                 | Result.Error _ -> None
                 | Result.Ok (part1, part2) -> of_parsed_value (part1, part2)
@@ -1240,7 +1240,7 @@ module IPv6 = struct
             let uint_to_hex v = 
                 let hex_raw = Uint128.to_string_hex v in
                 let hex_raw_len = String.length hex_raw in
-                String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
+                String.sub hex_raw 2 Stdlib.(hex_raw_len-2)
                 in
             let value_list = List.map uint_to_hex b16_values in
             match find_first_longest_streak (fun e -> Uint128.(compare e zero) = 0) b16_values with
@@ -1272,7 +1272,7 @@ module IPv6 = struct
                 begin
                 match lso, cso with
                 | None   , Some _                            ->  cso, r
-                | Some ls, Some cs when Pervasives.(cs > ls) ->  cso, r
+                | Some ls, Some cs when Stdlib.(cs > ls) ->  cso, r
                 | None   , None                              -> None, r
                 | Some _ , None                              ->  lso, r
                 | Some _ , Some _                            ->  lso, r
@@ -1291,7 +1291,7 @@ module IPv6 = struct
                     | None   , None                              -> detect_streak None None ((Value vi) :: r) ri
                     | Some _ , None                              -> detect_streak  lso None ((Value vi) :: r) ri
                     | None   , Some cs                           -> detect_streak  cso None ((Value vi) :: (Streak cs) :: r) ri
-                    | Some ls, Some cs when Pervasives.(cs > ls) -> detect_streak  cso None ((Value vi) :: (Streak cs) :: r) ri
+                    | Some ls, Some cs when Stdlib.(cs > ls) -> detect_streak  cso None ((Value vi) :: (Streak cs) :: r) ri
                     | Some ls, Some _                            -> detect_streak  lso None ((Value vi) :: (Streak ls) :: r) ri
                 end
                 in
@@ -1369,11 +1369,11 @@ module IPv6 = struct
 
         let of_string range_string =
             let range_string_len = String.length range_string in
-            if Pervasives.(range_string_len > Parser.max_str_length_range 
+            if Stdlib.(range_string_len > Parser.max_str_length_range 
                         || range_string_len < Parser.min_str_length_range) then
                 None
             else
-                let parsed_range = Angstrom.parse_string Parser.parser_range range_string in
+                let parsed_range = Angstrom.parse_string ~consume:All Parser.parser_range range_string in
                 match parsed_range with
                 | Result.Error _ -> None
                 | Result.Ok (first_parsed,last_parser) ->
@@ -1391,13 +1391,13 @@ module IPv6 = struct
 
         let of_string network_string =
             let network_string_len = String.length network_string in
-            if Pervasives.(network_string_len > Parser.max_str_length_network 
+            if Stdlib.(network_string_len > Parser.max_str_length_network 
                         || network_string_len < Parser.min_str_length_network) then
                         (
                 Printf.printf "ERROR: string of wrong size"; None
                         )
             else
-                let network_range = Angstrom.parse_string Parser.parser_network network_string in
+                let network_range = Angstrom.parse_string ~consume:All Parser.parser_network network_string in
                 match network_range with
                 | Result.Error e -> Printf.printf "ERROR: %s" e; None
                 | Result.Ok (parsed_network_address, prefix_len) ->
