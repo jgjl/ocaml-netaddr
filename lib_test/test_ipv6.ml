@@ -1,3 +1,34 @@
+let run_parser parser param =
+    match Angstrom.parse_string ~consume:All parser param with
+    | Result.Error _ -> -1
+    | Result.Ok r -> r
+;;
+
+let test_hex2int () =
+  let run_twowaytest (hex_str_in, int_out) =
+    let result_int = run_parser Netaddress.Parse_helper.read_16bit_hex_7_1 hex_str_in in
+    Alcotest.(check int) ("Conversion of " ^ hex_str_in ^ " to int " ^ (string_of_int int_out) ^ "-.") int_out result_int
+  in
+  let val_list = [
+    ("00", 0);
+    ("2003", 8195);
+    ("1001", 4097);
+    ("0001", 1);
+    ("ffff", 65535);
+    ("aaaa", 43690);
+    (* Failing tests *)
+    (":::", -1);
+    (":", -1);
+    ("1:2:3:4:5:6:7:8:9", -1);
+    ("9:", -1);
+    (":1", -1);
+    ("11111", -1);
+    ("1:2::6:7:", -1);
+    ("#", -1);
+    ("*", -1);
+    ("g", -1);
+  ] in
+  List.iter run_twowaytest val_list
 
 let test_str2netaddr_sameinout () =
   let run_twowaytest_sameinout addr_str =
@@ -123,6 +154,7 @@ let test_str2network_neg () =
     Alcotest.(check string) ("Conversion of " ^ network_str ^ " from and to netaddr.") "" stringv6
   in
   let addr_list = [
+    ":1";
     "2001/4";
     "::/129";
     "11::11/129";
@@ -138,8 +170,8 @@ let test_str2network_neg () =
 ;;
 
 let suite = [
-    "convert ip address from and to netaddr object where input = output", `Quick, test_str2netaddr_sameinout;
-    (* "convert ip address from and to netaddr object where input =/= output", `Quick, test_str2netaddr_sameinout;
+    "convert hex values to integer values", `Quick, test_hex2int;
+    "convert ip address from and to netaddr object where input =/= output", `Quick, test_str2netaddr_sameinout;
     "convert ip network from and to netaddr object, positive tests", `Quick, test_str2network_pos;
-    "convert ip network from and to netaddr object, negative tests", `Quick, test_str2network_neg; *)
+    "convert ip network from and to netaddr object, negative tests", `Quick, test_str2network_neg;
 ]
