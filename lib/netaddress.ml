@@ -216,8 +216,27 @@ module Parse_helper = struct
                                 None))
     ;;
 
+
+    let hex_char_to_int c = 
+        match Char.code c with
+        | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> dec_digit - 48
+        | hex_letter_upper when hex_letter_upper >= 65 && hex_letter_upper <= 60 -> hex_letter_upper - 65 + 10
+        | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> hex_letter_lower - 97 + 10
+        | _ -> raise (Parser_error ("Expected hex value, got " ^ (String.make 1 c)))
+
+    (*
+    Parse values in {0..2^16} used for bytes in the IPv6 coloned hexa notation.
+    *)
+    let read_16bit_hex_1_1 =
+        lift2 (fun f (_, r) -> (hex_char_to_int f)* r)
+            hexdigit
+            (scan_state (0, 0) (fun (pos, rv) c -> if (is_hexdigit c) && pos < 3 then
+                                Some (pos + 1, rv * 16 + hex_char_to_int c)
+                                else
+                                None))
+    ;;
+
     let read_16bit_hex_2 = 
-        (* lift2 (fun f r -> ) *)
         (scan_string 4 
             (fun state c -> 
                 match state, (is_hexdigit c) with
@@ -279,6 +298,22 @@ module Parse_helper = struct
                 | _ ->
                     match c with
                     | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> Some (n - 1)
+                    | _ -> None
+                )
+        )
+    ;;
+
+    let read_16bit_hex_7_1 = 
+        lift (fun (_, r) -> r)
+        (scan_state (4, 0) 
+            (fun (n, v) c -> 
+                match n with
+                | 0 -> None
+                | _ ->
+                    match Char.code c with
+                    | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> Some(n-1, v * 16 + dec_digit - 48)
+                    | hex_letter_upper when hex_letter_upper >= 65 && hex_letter_upper <= 60 -> Some(n-1, v * 16 + hex_letter_upper - 65 + 10)
+                    | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
                     | _ -> None
                 )
         )
@@ -854,6 +889,14 @@ module IPv6 = struct
                 (string ":")
         ;;
 
+        let parser_value_part_1_7 =
+            at_most_split 0 8
+                (read_16bit_hex_7_1 <* colon)
+                (colon *> read_16bit_hex_7_1)
+                read_16bit_hex_7_1
+                (string ":")
+        ;;
+
         let rec at_most_split_2 c m pf pr s f =
             (*
                 c = 
@@ -1130,7 +1173,7 @@ module IPv6 = struct
             parse Start ([],[])
         ;;
 
-        let parser_value_part = parser_value_part_4
+        let parser_value_part = parser_value_part_1_7
 
         let parser_address =
             lift (fun (part1, part2) -> (part1, part2))
