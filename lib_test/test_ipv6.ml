@@ -18,15 +18,31 @@ let test_hex2int () =
     ("aaaa", 43690);
     (* Failing tests *)
     (":::", -1);
+    ("1:::", -1);
     (":", -1);
     ("1:2:3:4:5:6:7:8:9", -1);
+    ("1:2:3:4:5:6:7:8:9:", -1);
     ("9:", -1);
     (":1", -1);
     ("11111", -1);
+    ("00001", -1);
     ("1:2::6:7:", -1);
     ("#", -1);
     ("*", -1);
     ("g", -1);
+    ("1:2:3:4:5:6:7:8:", -1);
+    ("1::3:4:5::6:7:8", -1);
+    ("1:2::4:5:6:7:8", -1);
+    ("1:2:3::5:6:7:8", -1);
+    ("1:2:3:4::6:7:8", -1);
+    ("1:2:3:4:5::7:8", -1);
+    ("1:2:3:4:5:6:::8", -1);
+    ("1:2:3:4:5::6::", -1);
+    ("1::4:5:6::7:8", -1);
+    ("1:2:::5:6:7:8", -1);
+    ("1:2:3:::6:7:8", -1);
+    ("1:2:3:4:::7:8", -1);
+    ("1:2:3:4:5:::8", -1);
   ] in
   List.iter run_twowaytest val_list
 
@@ -43,12 +59,13 @@ let test_str2netaddr_sameinout () =
     "::";
     "2003::";
     "2003:1001::";
+    "::12";
     "::1";
     "::1:2:3:4";
     "::1:2:3:4:5";
     "ffdb::1";
     "2004::4";
-    (* "1:2:3:4:5:6:7:8";
+    "1:2:3:4:5:6:7:8";
     "1::3:4:5:6:7:8";
     "1:2::4:5:6:7:8";
     "1:2:3::5:6:7:8";
@@ -78,10 +95,9 @@ let test_str2netaddr_sameinout () =
     "1::";
     "1:2345:6789:1011:1213::1415:ffff";
     "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
-    "0:0:0:0:0:0:192.168.0.1"; 
+    (* "0:0:0:0:0:0:192.168.0.1"; 
     "::192.168.0.1"; 
     "::ffff:192.168.0.1";  *)
-    (*"::ffff:192.168.0.1"; not yet *)
   ] in
   List.iter run_twowaytest_sameinout addr_list
 
@@ -171,7 +187,7 @@ let test_str2network_neg () =
 
 let suite = [
     "convert hex values to integer values", `Quick, test_hex2int;
-    "convert ip address from and to netaddr object where input =/= output", `Quick, test_str2netaddr_sameinout;
-    "convert ip network from and to netaddr object, positive tests", `Quick, test_str2network_pos;
-    "convert ip network from and to netaddr object, negative tests", `Quick, test_str2network_neg;
+    "convert ip address, input =/= output", `Quick, test_str2netaddr_sameinout;
+    "convert ip network, positive tests", `Quick, test_str2network_pos;
+    "convert ip network, negative tests", `Quick, test_str2network_neg;
 ]
