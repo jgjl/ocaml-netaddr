@@ -4,19 +4,21 @@ exception Parser_error of string
 
 module Parse_helper = struct
     open Angstrom
+    open Angstrom.Let_syntax
 
     type parse_result = 
     | Some_result
     | No_result
 
-    let rec at_most m p =
-        (*
-            Contributed by seliopou
-            https://github.com/inhabitedtype/angstrom/issues/110
-        *)
-        match m with
-        | 0 -> return []
-        | _ -> (lift2 (fun x xs -> x :: xs) p (at_most (m - 1) p))
+    let at_most n p =
+        if n < 0 
+        then fail "count n < 0"
+        else
+            let rec loop = function
+            | 0 -> return []
+            | n -> (lift2 List.cons p (loop (n - 1))) <|> return []
+            in
+            loop n
     ;;
 
     let limits n m p =
@@ -31,6 +33,7 @@ module Parse_helper = struct
 
     let rec at_most_split c m pf pr s f =
         (*
+            c = current part index
             m = max. count
             pf = first part to match
             pr = rest part to match
@@ -304,8 +307,7 @@ module Parse_helper = struct
     ;;
 
     let read_16bit_hex_7_1 = 
-        lift (fun (_, r) -> r)
-        (scan_state (4, 0) 
+        let* n, r = (scan_state (4, 0) 
             (fun (n, v) c -> 
                 match n with
                 | 0 -> None
@@ -316,7 +318,9 @@ module Parse_helper = struct
                     | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
                     | _ -> None
                 )
-        )
+        ) in
+        if n == 4 then fail "Empty hex number"
+        else return r
     ;;
 
     let read_16bit_hex_3 = 
@@ -895,6 +899,18 @@ module IPv6 = struct
                 (colon *> read_16bit_hex_7_1)
                 read_16bit_hex_7_1
                 (string ":")
+        ;;
+
+        let parser_value_part_1_7_1 =
+            (* lift (fun fp -> (fp, [])) ((at_most 7 (read_16bit_hex_7_1 <* colon))
+                              <|> (lift (fun _ -> []) colon)) *)
+            let* first_part = lift (fun _ -> []) colon
+                              <|> (at_most 7 (read_16bit_hex_7_1 <* colon)) in
+            let+ second_part = if (List.length first_part) = 7 
+                          then lift (fun v -> [v]) read_16bit_hex_7_1
+                          else (limits 1 (7-(List.length first_part)) (colon *> read_16bit_hex_7_1))
+                               <|> lift (fun _ -> []) colon in
+            (first_part, second_part)
         ;;
 
         let rec at_most_split_2 c m pf pr s f =
