@@ -307,7 +307,8 @@ module Parse_helper = struct
     ;;
 
     let read_16bit_hex_7_1 = 
-        let* n, r = (scan_state (4, 0) 
+        lift (fun (_,r) -> r) 
+        (scan_state (4, 0) 
             (fun (n, v) c -> 
                 match n with
                 | 0 -> None
@@ -318,9 +319,28 @@ module Parse_helper = struct
                     | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
                     | _ -> None
                 )
+        )
+    ;;
+
+    let read_16bit_hex_7_1_check = 
+        let* n, r = (scan_state (4, 0) 
+            (fun (n, v) c -> 
+                match n with
+                | 0 -> None
+                | _ ->
+                    match Char.code c with
+                    | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> 
+                        Some(n-1, v * 16 + dec_digit - 48)
+                    | hex_letter_upper when hex_letter_upper >= 65 && hex_letter_upper <= 60 -> 
+                        Some(n-1, v * 16 + hex_letter_upper - 65 + 10)
+                    | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> 
+                    Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
+                    | _ -> None
+                )
         ) in
-        if n == 4 then fail "Empty hex number"
-        else return r
+        match n with
+        | 4 -> fail "Empty hex number"
+        | _ -> return r
     ;;
 
     let read_16bit_hex_3 = 
@@ -902,13 +922,11 @@ module IPv6 = struct
         ;;
 
         let parser_value_part_1_7_1 =
-            (* lift (fun fp -> (fp, [])) ((at_most 7 (read_16bit_hex_7_1 <* colon))
-                              <|> (lift (fun _ -> []) colon)) *)
             let* first_part = lift (fun _ -> []) colon
-                              <|> (at_most 7 (read_16bit_hex_7_1 <* colon)) in
+                              <|> (at_most 7 (read_16bit_hex <* colon)) in
             let+ second_part = if (List.length first_part) = 7 
-                          then lift (fun v -> [v]) read_16bit_hex_7_1
-                          else (limits 1 (7-(List.length first_part)) (colon *> read_16bit_hex_7_1))
+                          then lift (fun v -> [v]) read_16bit_hex
+                          else (limits 1 (7-(List.length first_part)) (colon *> read_16bit_hex))
                                <|> lift (fun _ -> []) colon in
             (first_part, second_part)
         ;;
@@ -954,6 +972,7 @@ module IPv6 = struct
                 (string ":")
         ;;
 
+        let parse_value_part = parser_value_part_1_7_1
 (*
         let parser_value_part_6 =
             (*
@@ -1189,7 +1208,8 @@ module IPv6 = struct
             parse Start ([],[])
         ;;
 
-        let parser_value_part = parser_value_part_1_7
+        (* let parser_value_part = parser_value_part_1_7 *)
+        let parser_value_part = parser_value_part_1_7_1
 
         let parser_address =
             lift (fun (part1, part2) -> (part1, part2))

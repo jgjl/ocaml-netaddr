@@ -50,7 +50,8 @@ let parse_ipv6_parts () =
     let res_2 = latency1 ~name:"parser_value_part_2" repetitions (run_parser Netaddress.IPv6.Parser.parser_value_part_2) address in
     let res_4 = latency1 ~name:"parser_value_part_4" repetitions (run_parser Netaddress.IPv6.Parser.parser_value_part_4) address in
     (* let res_3 = latency1 ~name:"parser_value_part_3" repetitions (run_parser Netaddress.IPv6.Parser.parser_value_part_3) address in *)
-    let res_1_7 = latency1 ~name:"parser_value_part_7_1" repetitions (run_parser Netaddress.IPv6.Parser.parser_value_part_1_7) address in
+    let res_1_7 = latency1 ~name:"parser_value_part_1_7" repetitions (run_parser Netaddress.IPv6.Parser.parser_value_part_1_7) address in
+    let res_1_7_1 = latency1 ~name:"parser_value_part_1_7_1" repetitions (run_parser Netaddress.IPv6.Parser.parser_value_part_1_7_1) address in
     print_newline();
     tabulate res_1;
     tabulate res_5;
@@ -59,6 +60,7 @@ let parse_ipv6_parts () =
     (* tabulate res_3; *)
     tabulate res_4;
     tabulate res_1_7;
+    tabulate res_1_7_1;
 ;;
 
 let () =
