@@ -21,6 +21,8 @@ exception Parser_error of string
 module Parse_helper :
     sig
         (* Read 8, 7, or 5 bit values in decimal or hex encoding *)
+        val at_most : int -> 'a Angstrom.t -> 'a list Angstrom.t
+        val limits : int -> int -> 'a Angstrom.t -> 'a list Angstrom.t
         val read_5bit_dec : string Angstrom.t
         val read_7bit_dec : string Angstrom.t
         val read_byte_dec : string Angstrom.t
@@ -153,6 +155,7 @@ module IPv6 : sig
             val parser_value_part_3 : (string list * string list) Angstrom.t
             (* val parser_value_part_6 : (int list * int list) Angstrom.t *)
             val parser_value_part_1_7 : (int list * int list) Angstrom.t
+            val parser_value_part_1_7_1 : (int list * int list) Angstrom.t
         end
     module Address :
         sig
