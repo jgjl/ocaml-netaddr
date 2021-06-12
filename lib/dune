@@ -2,7 +2,6 @@
    (name        netaddress)
    (public_name netaddress)
    (libraries   stdint angstrom faraday result)
-;    (modules     netaddress netaddress_parser)
    (modules     netaddress)
    (wrapped     false)
    (synopsis    "A clone of Python's netaddr")

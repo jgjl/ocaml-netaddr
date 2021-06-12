@@ -14,9 +14,3 @@ Run tests
 ```
 dune runtest
 ```
-
-Run IPv6 parser benchmark
-```
-dune build lib_test/benchmark_ipv6parse.exe
-dune exec lib_test/benchmark_ipv6parse.exe
-```
