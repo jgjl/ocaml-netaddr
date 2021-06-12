@@ -182,7 +182,7 @@ let test_str2network_neg () =
 
 let suite = [
     "convert hex values to integer values", `Quick, test_hex2int;
-    "convert ip address, input =/= output", `Quick, test_str2netaddr_sameinout;
-    "convert ip network, positive tests", `Quick, test_str2network_pos;
-    "convert ip network, negative tests", `Quick, test_str2network_neg;
+    "convert ipv6 address, input =/= output", `Quick, test_str2netaddr_sameinout;
+    "convert ipv6 network, positive tests", `Quick, test_str2network_pos;
+    "convert ipv6 network, negative tests", `Quick, test_str2network_neg;
 ]

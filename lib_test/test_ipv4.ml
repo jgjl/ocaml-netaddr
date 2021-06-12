@@ -71,13 +71,6 @@ let test_str2network_pos () =
     "192.168.0.0/16";
     "172.16.0.0/12";
   ] in
-  let rec add_full_prefix_range test_list prefix_len =
-    if prefix_len < 0 then
-      test_list
-    else
-      add_full_prefix_range (("0.0.0.0/" ^ string_of_int prefix_len) :: test_list) (prefix_len - 1)
-    in
-  let addr_list_complete = add_full_prefix_range network_list Netaddress.IPv4.Address.bit_size in
   List.iter run_twowaytest network_list
 ;;
 
@@ -108,8 +101,8 @@ let test_str2network_neg () =
 
 
 let suite = [
-    "convert ip address from and to netaddr object, positive tests", `Quick, test_str2netaddr_pos;
-    "convert ip address from and to netaddr object, negative tests", `Quick, test_str2netaddr_neg;
-    "convert ip network from and to netaddr object, positive tests", `Quick, test_str2network_pos;
-    "convert ip network from and to netaddr object, negative tests", `Quick, test_str2network_neg;
+    "convert ipv4 address, positive tests", `Quick, test_str2netaddr_pos;
+    "convert ipv4 address, negative tests", `Quick, test_str2netaddr_neg;
+    "convert ipv4 network, positive tests", `Quick, test_str2network_pos;
+    "convert ipv4 network, negative tests", `Quick, test_str2network_neg;
 ];;

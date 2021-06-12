@@ -4,10 +4,3 @@
  (modules   test test_ipv4 test_ipv6)
  (modes     native)
  )
-
-(executable
- (name      benchmark_ipv6parse)
- (libraries angstrom result stdint netaddress benchmark)
- (modules   benchmark_ipv6parse)
- (modes     native)
- )
