@@ -6,7 +6,7 @@ let run_parser parser param =
 
 let test_hex2int () =
   let run_twowaytest (hex_str_in, int_out) =
-    let result_int = run_parser Netaddress.Parse_helper.read_16bit_hex_7_1 hex_str_in in
+    let result_int = run_parser Netaddress.Parse_helper.read_16bit_hex hex_str_in in
     Alcotest.(check int) ("Conversion of " ^ hex_str_in ^ " to int " ^ (string_of_int int_out) ^ "-.") int_out result_int
   in
   let val_list = [
@@ -150,13 +150,6 @@ let test_str2network_pos () =
     (* "::ffff:172.16.0.0/108"; Not implemented yet*)
     "2001:34:54:65::/64";
   ] in
-  let rec add_full_prefix_range test_list prefix_len =
-    if prefix_len < 0 then
-      test_list
-    else
-      add_full_prefix_range (("::/" ^ string_of_int prefix_len) :: test_list) (prefix_len - 1)
-    in
-  let addr_list_complete = add_full_prefix_range network_list Netaddress.IPv6.Address.bit_size in
   List.iter run_twowaytest network_list
 ;;
 

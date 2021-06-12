@@ -6,10 +6,6 @@ module Parse_helper = struct
     open Angstrom
     open Angstrom.Let_syntax
 
-    type parse_result = 
-    | Some_result
-    | No_result
-
     let at_most n p =
         if n < 0 
         then fail "count n < 0"
@@ -31,38 +27,6 @@ module Parse_helper = struct
             (at_most m p)
     ;;
 
-    let rec at_most_split c m pf pr s f =
-        (*
-            c = current part index
-            m = max. count
-            pf = first part to match
-            pr = rest part to match
-            s = split part
-            f = split part for the first read field
-        *)
-        if c = m-1 then
-            (lift (fun x -> ([x], [])) s)
-        else 
-            (* Parse (XXXX:)* parts *)
-            (lift2 (fun x1 (xs1, xs2) -> (x1 :: xs1, xs2)) pf (at_most_split (c+1) m pf pr s f))
-            <|>
-            (* Parse (:XXXX) parts, special case handling for addresses starting with "::" *)
-            (
-                if c = 0 then (
-                    lift2 (fun _ xs2 -> ([], xs2)) f (limits 1 6 pr)
-                    <|>
-                    (lift2 (fun _ _ -> ([], [])) f f)
-                    )
-                else (
-                    (*(lift2 (fun x2 xs2 -> ([], x2::xs2)) s (limits 1 (m-c-1) pr))*)
-                    (lift (fun xs -> ([], xs)) (limits 1 (m-c-1) pr))
-                    <|>
-                    (lift (fun _ -> ([], [])) f)
-                )
-            )
-    ;;
-
-
     let is_dot =
         function | '.' -> true | _ -> false
     ;;
@@ -77,16 +41,6 @@ module Parse_helper = struct
 
     let colon =
         skip is_colon
-    ;;
-
-    let is_hexdigit = 
-        function 
-        | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> true 
-        | _ -> false
-    ;;
-
-    let hexdigit = 
-        satisfy is_hexdigit
     ;;
 
     (*
@@ -210,119 +164,7 @@ module Parse_helper = struct
     (*
     Parse values in {0..2^16} used for bytes in the IPv6 coloned hexa notation.
     *)
-    let read_16bit_hex_1 =
-        lift2 (fun f r -> (String.make 1 f) ^ r)
-            hexdigit
-            (scan_string 0 (fun pos c -> if (is_hexdigit c) && pos < 3 then
-                                Some (pos + 1)
-                                else
-                                None))
-    ;;
-
-
-    let hex_char_to_int c = 
-        match Char.code c with
-        | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> dec_digit - 48
-        | hex_letter_upper when hex_letter_upper >= 65 && hex_letter_upper <= 60 -> hex_letter_upper - 65 + 10
-        | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> hex_letter_lower - 97 + 10
-        | _ -> raise (Parser_error ("Expected hex value, got " ^ (String.make 1 c)))
-
-    (*
-    Parse values in {0..2^16} used for bytes in the IPv6 coloned hexa notation.
-    *)
-    let read_16bit_hex_1_1 =
-        lift2 (fun f (_, r) -> (hex_char_to_int f)* r)
-            hexdigit
-            (scan_state (0, 0) (fun (pos, rv) c -> if (is_hexdigit c) && pos < 3 then
-                                Some (pos + 1, rv * 16 + hex_char_to_int c)
-                                else
-                                None))
-    ;;
-
-    let read_16bit_hex_2 = 
-        (scan_string 4 
-            (fun state c -> 
-                match state, (is_hexdigit c) with
-                | 4, true -> Some 3
-                | 3, true -> Some 2
-                | 2, true -> Some 1
-                | 1, true -> Some 0
-                | _, _ -> None
-                )
-            )
-    ;;
-
-    let read_16bit_hex_5 = 
-        lift2 (fun f r -> Char.escaped f ^ r)
-            hexdigit
-            (scan_string 1 
-                (fun state c -> 
-                    match state, (is_hexdigit c) with
-                    | 3, true -> Some 4
-                    | 2, true -> Some 3
-                    | 1, true -> Some 2
-                    | _, _ -> None
-                    )
-                )
-    ;;
-
-    let rec read_16bit_hex_6 r n = 
-        hexdigit >>=
-            fun h ->
-            begin 
-                let rn = (r lsl 4) + (int_of_char h) - 48 in
-                if n > 0 then
-                    read_16bit_hex_6 rn (n - 1)
-                    <|>
-                    return rn
-                else
-                    return rn
-            end
-    ;;
-
-    let read_16bit_hex_4 = 
-        (scan_string 4 
-            (fun n c -> 
-                if n < 1 then
-                    None
-                else 
-                    match c with
-                    | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> Some (n - 1)
-                    | _ -> None
-                )
-        )
-    ;;
-
-    let read_16bit_hex_7 = 
-        (scan_string 4 
-            (fun n c -> 
-                match n with
-                | 0 -> None
-                | _ ->
-                    match c with
-                    | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' -> Some (n - 1)
-                    | _ -> None
-                )
-        )
-    ;;
-
-    let read_16bit_hex_7_1 = 
-        lift (fun (_,r) -> r) 
-        (scan_state (4, 0) 
-            (fun (n, v) c -> 
-                match n with
-                | 0 -> None
-                | _ ->
-                    match Char.code c with
-                    | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> Some(n-1, v * 16 + dec_digit - 48)
-                    | hex_letter_upper when hex_letter_upper >= 65 && hex_letter_upper <= 60 -> Some(n-1, v * 16 + hex_letter_upper - 65 + 10)
-                    | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
-                    | _ -> None
-                )
-        )
-    ;;
-
-    let read_16bit_hex_7_1_check = 
+    let read_16bit_hex = 
         let* n, r = (scan_state (4, 0) 
             (fun (n, v) c -> 
                 match n with
@@ -342,28 +184,6 @@ module Parse_helper = struct
         | 4 -> fail "Empty hex number"
         | _ -> return r
     ;;
-
-    let read_16bit_hex_3 = 
-        lift (fun cl -> List.fold_left (fun r c -> (r lsl 4) + (int_of_char c)) 0 cl) (at_most 4 hexdigit)
-    ;;
-
-    let read_16bit_hex_8 =
-        let rec read_hex r v = 
-            match r with
-            | 0 -> return v
-            | r -> lift (fun d -> (v lsl 4) + (Char.code d) - 48) hexdigit >>= read_hex (r - 1)
-            in
-        read_hex 4 0
-    ;;
-
-    (* let rec read_16bit_hex_9 =
-        let rec read_hex r v = 
-            match r with
-            | 0 -> return v
-            | r -> (lift2 (fun x xr -> (v lsl 4) + (Char.code d) - 48) hexdigit (read_hex (r - 1)))
-    ;; *)
-
-    let read_16bit_hex = read_16bit_hex_7
 end
 
 module type Address = sig
@@ -571,8 +391,6 @@ module Eui48 = struct
 
     include MakeAddress(Uint48)
 
-    type parsed_value = int * int * int * int * int * int
-
     let min_str_length_address = 11
 
     let max_str_length_address = 17
@@ -688,9 +506,6 @@ module IPv4 = struct
         open Angstrom
         open Parse_helper
 
-        type parsed_value = int * int * int * int
-        type parsed_value_prefix = Prefix_value of int [@@unbox]
-
         let min_str_length_address = 7
         let min_str_length_range = 15
         let min_str_length_network = 9
@@ -712,21 +527,8 @@ module IPv4 = struct
             read_byte_dec)
         ;;
 
-        let parser_ipv4_part_2 a_make_fun =
-            (lift4
-            a_make_fun
-            (read_byte_dec <* dot)
-            (read_byte_dec <* dot)
-            (read_byte_dec <* dot)
-            read_byte_dec)
-        ;;
-
         let parser_address = 
             parser_ipv4_part <* end_of_input
-        ;;
-
-        let parser_address_2 a_make_fun = 
-            (parser_ipv4_part_2 a_make_fun) <* end_of_input
         ;;
 
         let parser_range =
@@ -735,27 +537,13 @@ module IPv4 = struct
             (parser_ipv4_part <* end_of_input)
         ;;
 
-        let parser_range_2 a_make_fun r_make_fun =
-            lift2 r_make_fun
-            ((parser_ipv4_part_2 a_make_fun) <* char '-')
-            ((parser_ipv4_part_2 a_make_fun) <* end_of_input)
-        ;;
-
         let parser_network =
             lift2 (fun network_value prefix_len -> (network_value, int_of_string prefix_len))
             (parser_ipv4_part <* char '/')
             (read_5bit_dec <* end_of_input)
-
-        let parser_network_2 a_make_fun n_make_fun =
-            lift2 n_make_fun
-            ((parser_ipv4_part_2 a_make_fun) <* char '/')
-            (read_5bit_dec <* end_of_input)
-        ;;
     end
 
     module Address = struct
-        open Parse_helper
-
         type a = t
         include MakeAddress(Uint32)
 
@@ -889,9 +677,6 @@ module IPv6 = struct
         open Angstrom
         open Parse_helper
 
-        type parsed_value = int list * int list
-        type parsed_value_prefix = Prefix_value of int [@@unbox]
-
         let min_str_length_address = 2
         let min_str_length_range = 5
         let min_str_length_network = 4
@@ -900,316 +685,17 @@ module IPv6 = struct
         let max_str_length_range = 79
         let max_str_length_network = 43
 
-        let int_of_hex_string s =
-            print_endline (" value: " ^ s);
-            int_of_string ("0x" ^ s)
-        ;;
-
-        let parser_value_part_1 =
-            at_most_split 0 8
-                (read_16bit_hex <* colon)
-                (colon *> read_16bit_hex)
-                read_16bit_hex
-                (string ":")
-        ;;
-
-        let parser_value_part_1_7 =
-            at_most_split 0 8
-                (read_16bit_hex_7_1 <* colon)
-                (colon *> read_16bit_hex_7_1)
-                read_16bit_hex_7_1
-                (string ":")
-        ;;
-
-        let parser_value_part_1_7_1 =
+        let parser_value_part =
+            (* Parse XXXX: parts or : *)
             let* first_part = lift (fun _ -> []) colon
                               <|> (at_most 7 (read_16bit_hex <* colon)) in
+            (* Parse :XXXX parts or : *)
             let+ second_part = if (List.length first_part) = 7 
                           then lift (fun v -> [v]) read_16bit_hex
                           else (limits 1 (7-(List.length first_part)) (colon *> read_16bit_hex))
                                <|> lift (fun _ -> []) colon in
             (first_part, second_part)
         ;;
-
-        let rec at_most_split_2 c m pf pr s f =
-            (*
-                c = 
-                m = max. count
-                pf = first part to match
-                pr = rest part to match
-                s = split part
-                f = split part for the first read field
-            *)
-            match c-m+1 with
-            | 0 -> (lift (fun x -> ([x], [])) s)
-            | _ ->
-                (* Parse (XXXX:)* parts *)
-                (lift2 (fun x1 (xs1, xs2) -> (x1 :: xs1, xs2)) 
-                        pf 
-                        (at_most_split_2 (c+1) m pf pr s f))
-                <|>
-                (* Parse (:XXXX) parts, special case handling for addresses starting with "::" *)
-                (
-                    match c with
-                    | 0 -> (
-                        lift2 (fun _ xs2 -> ([], xs2)) f (limits 1 6 pr)
-                        <|>
-                        (lift2 (fun _ _ -> ([], [])) f f)
-                        )
-                    | _ -> (
-                        (lift (fun xs -> ([], xs)) (limits 1 (m-c-1) pr))
-                        <|>
-                        (lift (fun _ -> ([], [])) f)
-                    )
-                )
-        ;;
-
-        let parser_value_part_5 =
-            at_most_split_2 0 8
-                (read_16bit_hex <* colon)
-                (colon *> read_16bit_hex)
-                read_16bit_hex
-                (string ":")
-        ;;
-
-        let parse_value_part = parser_value_part_1_7_1
-(*
-        let parser_value_part_6 =
-            (*
-                r = remaining positions
-                pf = first part to match
-                pr = rest part to match
-                s = split part
-                f = split part for the first read field
-            *)
-            let s = colon in (* separator *)
-            let v = read_16bit_hex_8 in (* value *)
-            let vs = v <* s in
-            let sv = s *> v in
-            let sv4 = s *> IPv4.Parser.parser_ipv4_part in
-            let rec parse_start r =
-                s *> parse_sv (r-2)
-            and parse_sv r =
-                sv >>= parse_sv (r-1)
-            and parse_vs r =
-                vs >>= parse_vs (r-1)
-            and at_most_split r =
-                if r = 1 then
-                begin
-                    (lift (fun x -> ([x], [])) v)
-                end
-                else
-                begin
-                    (* Parse (XXXX:)* parts *)
-                    (lift2 (fun x1 (xs1, xs2) -> (x1 :: xs1, xs2)) 
-                            vs 
-                            (at_most_split (r-1)))
-                    <|>
-                    (* Parse (:XXXX) parts, special case handling for addresses starting with "::" *)
-                    (
-                        if r = 8 then
-                        begin
-                            lift (fun xs2 -> ([], xs2)) (s *> (limits 1 (r-1) sv))
-                            <|>
-                            (lift (fun _ -> ([],[])) (s *> s))
-                        end
-                        else if r < 5 then
-                        begin
-                            (lift (fun xs -> ([], xs)) (limits 1 (r-1) sv))
-                            <|>
-                            (lift (fun _ -> ([], [])) s)
-                        end
-                        else
-                        begin
-                            (lift (fun xs -> ([], xs)) (limits 1 (r-1) sv))
-                            <|>
-                            (lift (fun _ -> ([], [])) s)
-                        end
-                    )
-                end
-                in
-            at_most_split 8
-        ;;
-*)
-
-        type ps =
-        | PS_Start
-        | PS_bdc of int
-        | PS_adc of int
-        | PS_End
-
-        let parser_value_part_2 =
-            print_endline "fun called";
-            let bdc_parse = read_16bit_hex_5 <* colon in
-            let adc_parse = colon *> read_16bit_hex_5 in
-            let rec parse state (bdc, adc) =
-                match state with
-                | PS_Start -> 
-                begin
-                    (* print_endline "PS_Start"; *)
-                    choice [
-                        (bdc_parse >>= fun v -> parse (PS_bdc 1) ([v], adc));
-                        (colon *> parse (PS_adc 1) (bdc, adc));
-                    ]
-                end
-                | PS_bdc n when n < 7 -> 
-                begin
-                    (* Printf.printf "PS_bdc %d < 7\n" n; *)
-                    choice [
-                        (bdc_parse >>=
-                            fun v ->
-                                (* print_endline "bdc n<7 -> bdc"; *)
-                                parse (PS_bdc (n + 1)) (v :: bdc, adc));
-                        (adc_parse >>=
-                            fun v ->
-                                (* print_endline "bdc n<7 -> adc"; *)
-                                parse (PS_adc (n + 1)) (bdc, [v]));
-                        (colon *> parse PS_End (bdc, adc));
-                    ]
-                end
-                | PS_bdc n when n = 7 -> 
-                begin
-                    (* Printf.printf "PS_bdc %d = 7\n" n; *)
-                    read_16bit_hex_5 >>=
-                        fun v ->
-                            parse PS_End (v :: bdc, adc)
-                end
-                | PS_adc n when n < 7 -> 
-                begin
-                    (* Printf.printf "PS_adc %d < 7\n" n; *)
-                    choice [
-                        (adc_parse >>=
-                            fun v ->
-                                parse (PS_adc (n + 1)) (bdc, v :: adc));
-                        (colon *> parse PS_End (bdc, adc));
-                        (parse PS_End (bdc, adc));
-                    ]
-                end
-                | PS_adc n when n = 7 -> 
-                begin
-                    (* Printf.printf "PS_adc %d = 7\n" n; *)
-                    (* print_endline "adc_parse"; *)
-                    choice [
-                    (adc_parse >>=
-                        fun v ->
-                            (* print_endline "Ayayay"; *)
-                            parse PS_End (bdc, v :: adc));
-                        (parse PS_End (bdc, adc));
-                    ]
-                end
-                | PS_adc _ | PS_bdc _ -> 
-                    (* print_endline "badmatch"; *)
-                    fail "Adc: wrong char"
-                | PS_End _ -> 
-                    (* print_endline "PS_End"; *)
-                    return (List.rev bdc, List.rev adc)
-                in
-            parse PS_Start ([], [])
-        ;;
-
-        type ps4 =
-        | PS4_Start
-        | PS4_bdc
-        | PS4_adc
-        | PS4_End
-        let parser_value_part_4 =
-            print_endline "fun called";
-            let bdc_parse = (read_16bit_hex_6 0 4) <* colon in
-            let adc_parse = colon *> (read_16bit_hex_6 0 4) in
-            let rec parse (state: ps4) (n: int) ((bdc, adc): int list * int list ) (vt: parse_result) ve =
-            begin
-                let adc_n = match vt with 
-                            | Some_result -> ve :: adc
-                            | No_result -> adc
-                    in
-                let bdc_n = match vt with 
-                            | Some_result -> ve :: bdc
-                            | No_result -> bdc
-                    in
-                match state with
-                | PS4_Start -> 
-                    (bdc_parse >>= parse PS4_bdc 1 (bdc_n, adc_n) Some_result)
-                    <|>
-                    (colon *> parse PS4_adc (n + 1) (bdc_n, adc_n) No_result 0)
-                | PS4_bdc when n < 7 -> 
-                    (bdc_parse >>= parse PS4_bdc (n + 1) (bdc, adc) Some_result)
-                    <|>
-                    (adc_parse >>= parse PS4_adc (n + 1) (bdc, adc) Some_result)
-                    <|>
-                    (colon *> parse PS4_End n (bdc, adc) No_result 0)
-                | PS4_bdc when n = 7 -> 
-                    read_16bit_hex_6 0 4 >>= parse PS4_End n (bdc, adc) Some_result
-                | PS4_adc when n < 7 -> 
-                    (adc_parse >>= parse PS4_adc (n + 1) (bdc, adc) Some_result)
-                    <|>
-                    (colon *> parse PS4_End n (bdc, adc) No_result 0)
-                    <|>
-                    (parse PS4_End n (bdc, adc) No_result 0)
-                | PS4_adc when n = 7 -> 
-                    (adc_parse >>= parse PS4_End n (bdc, adc) Some_result)
-                    <|>
-                    (parse PS4_End n (bdc, adc) No_result 0)
-                | PS4_adc | PS4_bdc -> 
-                    (* print_endline "badmatch"; *)
-                    fail "Adc: wrong char"
-                | PS4_End -> 
-                    (* print_endline "PS_End"; *)
-                    return (List.rev bdc_n, List.rev adc_n)
-            end
-                in
-            parse PS4_Start 0 ([], []) No_result 0
-        ;;
-                    
-        type parse_state = 
-        | Start
-        | Before_dc of int
-        | After_dc of int * int
-        | End 
-
-        let parser_value_part_3 =
-            let rec parse state (bdc, adc) =
-                match state with
-                | Start -> 
-                begin
-                    (read_16bit_hex <* colon >>=
-                        (fun v ->
-                            parse (Before_dc 1) (v :: bdc, adc)))
-                    <|> (colon >>=
-                        (fun _ ->
-                            parse (After_dc (0, 0)) (bdc, adc)))
-                end 
-                | Before_dc bn when bn < 7 ->
-                begin
-                    ((read_16bit_hex <* colon) >>=
-                        (fun v ->
-                            parse (Before_dc (bn + 1)) (v :: bdc, adc)))
-                    <|> (colon *> read_16bit_hex >>=
-                        (fun v ->
-                            parse (After_dc (bn, 1)) (bdc, v :: adc)))
-                    <|> (colon >>=
-                    (fun _ -> parse End (bdc, adc)))
-                end
-                | Before_dc bn when bn = 8 ->
-                begin
-                    read_16bit_hex >>=
-                        (fun v ->
-                            parse End (v :: bdc, []))
-                end
-                | After_dc (bn, an) when bn + an < 7 ->
-                begin
-                    ((satisfy is_colon) *> read_16bit_hex) >>=
-                        (fun v ->
-                            parse (After_dc (bn, (an + 1))) (bdc, v :: adc))
-                    <|> (colon >>=
-                    (fun _ -> parse End (bdc, adc)))
-                end
-                | _ -> return (List.rev bdc, List.rev adc)
-                in
-            parse Start ([],[])
-        ;;
-
-        (* let parser_value_part = parser_value_part_1_7 *)
-        let parser_value_part = parser_value_part_1_7_1
 
         let parser_address =
             lift (fun (part1, part2) -> (part1, part2))
