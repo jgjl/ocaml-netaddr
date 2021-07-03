@@ -97,9 +97,6 @@ let test_str2netaddr_sameinout () =
     "1::";
     "1:2345:6789:1011:1213::1415:ffff";
     "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff";
-    (* "0:0:0:0:0:0:192.168.0.1"; 
-    "::192.168.0.1"; 
-    "::ffff:192.168.0.1";  *)
   ] in
   List.iter run_twowaytest_sameinout addr_list
 
@@ -115,14 +112,17 @@ let test_str2netaddr () =
   let addr_list = [
     ("::0:0", "::");
     ("2003::0:00", "2003::");
-    ("2003:1001:0:0:0:0:0:0", "2003::");
+    ("2003:1001:0:0:0:0:0:0", "2003:1001::");
     ("0:0::1", "::1");
-    ("ffdb::0:01", "ffdb::");
-    ("2004:0:0:0000:4", "2004::4");
+    ("ffdb::0:01", "ffdb::1");
+    (* ("2004:0:0:0000:4", "2004::4"); *)
     ("0:0:0:0:0:0:0:0", "::");
     ("0000:0000:0000:0000:0000:0000:0000:0000", "::");
     ("0001:002:03:004::7:8", "1:2:3:4::7:8");
-    ("::ffff:192.168.0.1", "::ffff::c0a8:1");
+    (* Embedded IPv4 address *)
+    ("0:0:0:0:0:0:192.168.0.1", "::c0a8:1"); 
+    ("::192.168.0.1", ""); 
+    ("::ffff:192.168.0.1", "::ffff:c0a8:1");
     ("0000:00:0::ffff:192.168.0.1", "::ffff::c0a8:1");
     (* Failing tests *)
     (":::", "");
@@ -182,7 +182,8 @@ let test_str2network_neg () =
 
 let suite = [
     "convert hex values to integer values", `Quick, test_hex2int;
-    "convert ipv6 address, input =/= output", `Quick, test_str2netaddr_sameinout;
+    "convert ipv6 address, input =/= output", `Quick, test_str2netaddr;
+    "convert ipv6 address, input == output", `Quick, test_str2netaddr_sameinout;
     "convert ipv6 network, positive tests", `Quick, test_str2network_pos;
     "convert ipv6 network, negative tests", `Quick, test_str2network_neg;
 ]
