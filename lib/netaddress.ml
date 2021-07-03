@@ -1,6 +1,7 @@
 
 exception Result_out_of_range of string
 exception Parser_error of string
+exception Serialize_error of string
 
 module Parse_helper = struct
     open Angstrom
@@ -162,7 +163,7 @@ module Parse_helper = struct
     ;;
 
     (*
-    Parse values in {0..2^16} used for bytes in the IPv6 coloned hexa notation.
+    Parse values in {0..2^16} used for bytes in the IPv6-coloned hex notation.
     *)
     let read_16bit_hex = 
         let* n, r = (scan_state (4, 0) 
@@ -184,6 +185,12 @@ module Parse_helper = struct
         | 4 -> fail "Empty hex number"
         | _ -> return r
     ;;
+end
+
+module Serialize_helper = struct
+    let open Faraday in
+    let write_16bit_hex t v =
+    (* TODO: Hier geht es weiter *)
 end
 
 module type Address = sig
@@ -316,7 +323,7 @@ module MakeRange (A:Address) = struct
         A.sub range.r_last range.r_first
     ;;
 
-    let contains range address =
+    let contains_address range address =
         if (A.compare range.r_first address) <= 0 &&
             (A.compare range.r_last address) >= 0 then
             true
@@ -324,8 +331,8 @@ module MakeRange (A:Address) = struct
             false
     ;;
 
-    let contains_range range1 range2 =
-        contains range1 range2.r_first && contains range1 range2.r_last
+    let contains range1 range2 =
+        contains_address range1 range2.r_first && contains_address range1 range2.r_last
     ;;
 end
 
@@ -366,7 +373,7 @@ module MakeNetwork (A:Address) = struct
             None
     ;;
 
-    let contains network address =
+    let contains_address network address =
         if (A.compare network.n_first address) <= 0 &&
             (A.compare network.n_last address) >= 0 then
             true
@@ -374,8 +381,8 @@ module MakeNetwork (A:Address) = struct
             false
     ;;
 
-    let contains_network network subnet =
-        contains network subnet.n_first && contains network subnet.n_last
+    let contains network subnet =
+        contains_address network subnet.n_first && contains_address network subnet.n_last
     ;;
 end
 
@@ -686,14 +693,19 @@ module IPv6 = struct
         let max_str_length_network = 43
 
         let parser_value_part =
+            let ipv4_part_to_16bit_list = function
+                | (b1, b2, b3, b4) -> [b1 * 256 + b2; b3 * 256 + b4]
+                in
             (* Parse XXXX: parts or : *)
             let* first_part = lift (fun _ -> []) colon
                               <|> (at_most 7 (read_16bit_hex <* colon)) in
             (* Parse :XXXX parts or : *)
-            let+ second_part = if (List.length first_part) = 7 
-                          then lift (fun v -> [v]) read_16bit_hex
-                          else (limits 1 (7-(List.length first_part)) (colon *> read_16bit_hex))
-                               <|> lift (fun _ -> []) colon in
+            let+ second_part = match (List.length first_part) with
+                          | 7 -> lift (fun v -> [v]) read_16bit_hex
+                          | 6 -> lift (fun v -> ipv4_part_to_16bit_list v) IPv4.Parser.parser_ipv4_part
+                                 <|> ((limits 1 1 (colon *> read_16bit_hex)) <|> lift (fun _ -> []) colon)
+                          | l -> (limits 1 (7-l) (colon *> read_16bit_hex)) <|> lift (fun _ -> []) colon 
+                        in
             (first_part, second_part)
         ;;
 
@@ -794,13 +806,13 @@ module IPv6 = struct
                 | Result.Ok (part1, part2) -> of_parsed_value (part1, part2)
         ;;
 
-        let to_string netaddr =
+        (* let to_string netaddr =
             (*let shift_list = [112;96;80;64;48;32;16;0] in*)
             (* Shift and 'and' each 16bit part of the value*)
             let b16_values = List.map 
                                 (fun sw -> Uint128.(logand (shift_right netaddr sw) mask_16lsb)) 
                                 shift_list in
-            (* Find the longest list of conscutive zeros to be replaced by :: in the output *)
+            (* Find the longest list of consecutive zeros to be replaced by :: in the output *)
             (* Convert value to hex, remove '0x' prefix *)
             let uint_to_hex v = 
                 let hex_raw = Uint128.to_string_hex v in
@@ -823,13 +835,67 @@ module IPv6 = struct
                     let part2 = Array.to_list (Array.sub value_array part2_start part2_len) in
                     String.concat ":" part1 ^ "::" ^ String.concat ":" part2
                 end
-        ;;
+        ;; *)
 
-        type either =
+        (* type either =
         | Value of int
-        | Streak of int
+        | Streak of int *)
 
-        let serialize t netaddr =
+        let serialize t netaddr = 
+            let open Faraday in
+            let open Stdlib in
+            let rec loop addr_val shift_cnt last_streak_cnt last_max_streak =
+                match shift_cnt with
+                | 0 -> 
+                begin
+                    match last_max_streak with
+                    | Some lms when lms = 7 -> print_endline (string_of_int lms); write_char t ':'; last_max_streak
+                    | Some lms -> print_endline (string_of_int lms); last_max_streak
+                    | _ -> last_max_streak
+                end
+                | _ ->
+                begin
+                    let element = Uint128.(to_int (logand addr_val mask_16lsb)) in
+                    let next_addr_val = Uint128.(shift_right addr_val 16) in
+                    let new_streak_cnt, new_max_streak = if element = 0 then
+                                        begin
+                                            match last_streak_cnt, last_max_streak with
+                                            | None, _ -> Some 0, last_max_streak
+                                            | Some lsc, None -> Some (lsc + 1), Some (lsc + 1)
+                                            | Some lsc, Some lms -> Some (lsc + 1), Some Stdlib.(max (lsc + 1) lms)
+                                        end
+                                     else
+                                        None, last_max_streak
+                        in
+                    let overall_max_streak = loop next_addr_val (shift_cnt - 1) new_streak_cnt new_max_streak in
+                    match overall_max_streak, new_streak_cnt with
+                    | None, Some nsc                  when (nsc > 0) -> 
+                        raise (Serialize_error "No max streak but found local streak length > 0.")
+                    | Some oms, Some nsc when oms = nsc && (nsc > 0) -> 
+                        Some (oms - 1)
+                    | Some oms, Some nsc when oms = nsc && nsc = 0 -> 
+                        write_char t ':'; None
+                    | _, _ -> 
+                    begin
+                        if shift_cnt > 1 then
+                            write_char t ':';
+                        write_string t (string_of_int element);
+                        LE.write_uint16 t element;
+                        overall_max_streak
+                    end
+                    
+                end
+                in
+            let _ = loop netaddr 8 None None in
+            ()
+        
+        let to_string netaddr =
+            let t = Faraday.create 40 in
+            serialize t netaddr;
+            Faraday.serialize_to_string t
+
+
+        (* let serialize t netaddr =
             (* [@tailcall] *)
             let rec detect_streak (lso: int option) (cso: int option) (r: either list) (i: int list) : int option * either list =
                 match i with
@@ -911,7 +977,7 @@ module IPv6 = struct
                     in
             let min_streak, value_list = detect_streak None None [] shift_list in
             combine min_streak value_list true
-        ;;
+        ;; *)
 
         let of_ipv4_address ipv4_address =
             let ipv4_value = Uint128.of_uint32 ipv4_address in

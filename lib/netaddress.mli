@@ -2,6 +2,8 @@
 Todo
  - Networks
  - Ranges
+ - Implement official formatting rules: RFC5952
+   https://datatracker.ietf.org/doc/html/rfc5952
  - Address classification
    https://www.iana.org/assignments/ipv4-address-space/ipv4-address-space.xhtml
    https://www.iana.org/assignments/ipv6-address-space/ipv6-address-space.xhtml
@@ -116,8 +118,8 @@ module IPv4 :
             val get_address : r -> Address.a
             val get_last_address : r -> Address.a
             val size : r -> Address.a
-            val contains : r -> Address.a -> bool
-            val contains_range : r -> r -> bool
+            val contains_address : r -> Address.a -> bool
+            val contains : r -> r -> bool
         end
         module Network :
         sig
@@ -129,8 +131,8 @@ module IPv4 :
             val get_address : n -> Address.a
             val get_last_address : n -> Address.a
             val prefix_len : n -> int
-            val contains : n -> Address.a -> bool
-            val contains_network : n -> n -> bool
+            val contains_address : n -> Address.a -> bool
+            val contains : n -> n -> bool
         end
     end
 
@@ -184,8 +186,8 @@ module IPv6 : sig
             val get_address : r -> Address.a
             val get_last_address : r -> Address.a
             val size : r -> t
-            val contains : r -> Address.a -> bool
-            val contains_range : r -> r -> bool
+            val contains : r -> r -> bool
+            val contains_address : r -> Address.a -> bool
         end
         module Network :
         sig
@@ -197,7 +199,7 @@ module IPv6 : sig
             val get_address : n -> Address.a
             val get_last_address : n -> Address.a
             val prefix_len : n -> int
-            val contains : n -> Address.a -> bool
-            val contains_network : n -> n -> bool
+            val contains : n -> n -> bool
+            val contains_address : n -> Address.a -> bool
         end
     end
