@@ -14,3 +14,8 @@ Run tests
 ```
 dune runtest
 ```
+
+Run utop
+```
+dune utop lib
+```
