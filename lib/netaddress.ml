@@ -741,16 +741,8 @@ module IPv6 = struct
                 Some (ints_to_value complete_int_list)
         ;;
 
-        let of_string ipv6_string =
-            let ipv6_string_len = String.length ipv6_string in
-            if Stdlib.(ipv6_string_len > Parser.max_str_length_address 
-                        || ipv6_string_len < Parser.min_str_length_address) then
-                None
-            else
-                let parsed_ipv6 = Angstrom.parse_string ~consume:All Parser.parser_address ipv6_string in
-                match parsed_ipv6 with
-                | Result.Error _ -> None
-                | Result.Ok (part1, part2) -> of_parsed_value (part1, part2)
+        let parse =
+            Angstrom.lift of_parsed_value Parser.parser_address 
         ;;
 
         let serialize t netaddr = 
@@ -800,6 +792,18 @@ module IPv6 = struct
             ()
         ;;
         
+        let of_string ipv6_string =
+            let ipv6_string_len = String.length ipv6_string in
+            if Stdlib.(ipv6_string_len > Parser.max_str_length_address 
+                        || ipv6_string_len < Parser.min_str_length_address) then
+                None
+            else
+                let parsed_ipv6 = Angstrom.parse_string ~consume:All parse ipv6_string in
+                match parsed_ipv6 with
+                | Result.Error _ -> None
+                | Result.Ok v -> v
+        ;;
+
         let to_string netaddr =
             let t = Faraday.create Parser.max_str_length_address in
             serialize t netaddr;
