@@ -177,7 +177,7 @@ module Parse_helper = struct
                     | hex_letter_upper when hex_letter_upper >= 65 && hex_letter_upper <= 60 -> 
                         Some(n-1, v * 16 + hex_letter_upper - 65 + 10)
                     | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> 
-                    Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
+                        Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
                     | _ -> None
                 )
         ) in
@@ -188,9 +188,35 @@ module Parse_helper = struct
 end
 
 module Serialize_helper = struct
-    let open Faraday in
-    let write_16bit_hex t v =
-    (* TODO: Hier geht es weiter *)
+
+    let write_hex t value =
+        let open Faraday in
+        let rec loop v = 
+            let c = match (v land 0xf) with
+            | 0x0 -> '0'
+            | 0x1 -> '1'
+            | 0x2 -> '2'
+            | 0x3 -> '3'
+            | 0x4 -> '4'
+            | 0x5 -> '5'
+            | 0x6 -> '6'
+            | 0x7 -> '7'
+            | 0x8 -> '8'
+            | 0x9 -> '9'
+            | 0xa -> 'a'
+            | 0xb -> 'b'
+            | 0xc -> 'c'
+            | 0xd -> 'd'
+            | 0xe -> 'e'
+            | 0xf -> 'f'
+            | _ -> raise (Serialize_error "Unexpected value.")
+                in
+            if v > 0xf then
+                loop (v lsr 4);
+            write_char t c;
+            in
+        loop value
+    ;;
 end
 
 module type Address = sig
@@ -300,15 +326,15 @@ module MakeRange (A:Address) = struct
             None
     ;;
 
-    let to_string range =
-        (A.to_string range.r_first) ^ "-" ^ (A.to_string range.r_last)
-    ;;
-
     let serialize t range =
         let open Faraday in
         A.serialize t range.r_first; 
         write_char t '-'; 
         A.serialize t range.r_last
+    ;;
+
+    let to_string range =
+        (A.to_string range.r_first) ^ "-" ^ (A.to_string range.r_last)
     ;;
 
     let get_address range = 
@@ -399,12 +425,7 @@ module Eui48 = struct
     include MakeAddress(Uint48)
 
     let min_str_length_address = 11
-
     let max_str_length_address = 17
-
-    (* let stringbytes_to_list b1 b2 b3 b4 b5 b6 =
-        [int_of_string b1; int_of_string b2; int_of_string b3; int_of_string b4; int_of_string b5; int_of_string b6]
-    ;; *)
 
     let parser_eui48_part =
         lift4 (fun b1 b2 b3 b4 b5 b6 -> 
@@ -464,21 +485,6 @@ module Eui48 = struct
             | _ -> None
     ;;
 
-    let to_string netaddr =
-        let open Uint48 in
-        let b1 = logand netaddr mask_8lsb in
-        let b2 = logand (shift_right netaddr 8) mask_8lsb in
-        let b3 = logand (shift_right netaddr 16) mask_8lsb in
-        let b4 = logand (shift_right netaddr 24) mask_8lsb in
-        let b5 = logand (shift_right netaddr 32) mask_8lsb in
-        let b6 = logand (shift_right netaddr 40) mask_8lsb in
-        (uint_to_hex b6 ^":"^ uint_to_hex b5 
-                        ^":"^ uint_to_hex b4 
-                        ^":"^ uint_to_hex b3 
-                        ^":"^ uint_to_hex b2 
-                        ^":"^ uint_to_hex b1)
-    ;;
-    
     let serialize t netaddr =
         let open Uint48 in
         let open Faraday in
@@ -493,6 +499,12 @@ module Eui48 = struct
         write_string t (uint_to_hex (logand (shift_right netaddr 8) mask_8lsb));
         write_char t ':';
         write_string t (uint_to_hex (logand netaddr mask_8lsb));
+    ;;
+
+    let to_string netaddr =
+        let t = Faraday.create max_str_length_address in
+        serialize t netaddr;
+        Faraday.serialize_to_string t
     ;;
 
     let of_int = Uint48.of_int
@@ -580,17 +592,6 @@ module IPv4 = struct
             | _ -> None
         ;;
 
-        let to_string netaddr =
-            let open Uint32 in
-            let b0 = logand netaddr mask_8lsb in
-            let b1 = logand (shift_right netaddr 8) mask_8lsb in
-            let b2 = logand (shift_right netaddr 16) mask_8lsb in
-            let b3 = logand (shift_right netaddr 24) mask_8lsb in
-            (to_string b3 ^"."^ to_string b2 
-                          ^"."^ to_string b1 
-                          ^"."^ to_string b0)
-        ;;
-
         let serialize t netaddr =
             let open Faraday in
             let open Uint32 in
@@ -605,6 +606,12 @@ module IPv4 = struct
             write_string t (to_string b1);
             write_char t '.';
             write_string t (to_string b0);
+        ;;
+
+        let to_string netaddr =
+            let t = Faraday.create Parser.max_str_length_address in
+            serialize t netaddr;
+            Faraday.serialize_to_string t
         ;;
 
         let of_int = Uint32.of_int
@@ -654,31 +661,10 @@ module IPv6 = struct
 
     type t = uint128
 
-    let shift_list = [112;96;80;64;48;32;16;0]
-
-    type cur_streak = { cur_streak_start : int; cur_streak_len : int}
-    type max_streak = { max_streak_start : int; max_streak_len : int}
-    type streak = { streak_start : int; streak_len : int}
-
     let mask_16lsb = Uint128.of_string "0xffff"
     let mask_32lsb = Uint128.of_string "0xffffffff"
     let mask_48lsb = Uint128.of_string "0xffffffffffff"
     let mask_third_16lsb = Uint128.of_string "0xffff00000000"
-
-    let max_streak_of_cur_streak cur_streak =
-        {max_streak_start = cur_streak.cur_streak_start; 
-        max_streak_len = cur_streak.cur_streak_len}
-    ;;
-
-    let streak_of_cur_streak cur_streak =
-        {streak_start = cur_streak.cur_streak_start; 
-        streak_len = cur_streak.cur_streak_len}
-    ;;
-
-    let streak_of_max_streak max_streak =
-        {streak_start = max_streak.max_streak_start; 
-        streak_len = max_streak.max_streak_len}
-    ;;
 
     module Parser = struct    
         open Angstrom
@@ -703,8 +689,10 @@ module IPv6 = struct
             let+ second_part = match (List.length first_part) with
                           | 7 -> lift (fun v -> [v]) read_16bit_hex
                           | 6 -> lift (fun v -> ipv4_part_to_16bit_list v) IPv4.Parser.parser_ipv4_part
-                                 <|> ((limits 1 1 (colon *> read_16bit_hex)) <|> lift (fun _ -> []) colon)
-                          | l -> (limits 1 (7-l) (colon *> read_16bit_hex)) <|> lift (fun _ -> []) colon 
+                                 <|> ((limits 1 1 (colon *> read_16bit_hex)) 
+                                 <|> lift (fun _ -> []) colon)
+                          | l -> (limits 1 (7-l) (colon *> read_16bit_hex)) 
+                                 <|> lift (fun _ -> []) colon 
                         in
             (first_part, second_part)
         ;;
@@ -735,49 +723,8 @@ module IPv6 = struct
 
         include MakeAddress(Uint128)
 
-        let find_first_longest_streak element_selector element_list =
-            let open Stdlib in
-            let detect_list (i, cur_opt, max_opt) value = 
-                begin
-                let element_selected = element_selector value in
-                let new_cur, new_max = 
-                    match cur_opt with
-                    | None ->
-                    begin
-                    if element_selected then
-                        Some {cur_streak_start = i; cur_streak_len = 1}, max_opt
-                    else 
-                        None, max_opt
-                    end
-                    | Some last_cur ->
-                    begin
-                    if element_selected then
-                        Some {last_cur with cur_streak_len = last_cur.cur_streak_len + 1}, max_opt
-                    else 
-                        match max_opt with
-                        | None -> None, Some (max_streak_of_cur_streak last_cur)
-                        | Some last_max when last_cur.cur_streak_len > last_max.max_streak_len -> 
-                        None, Some (max_streak_of_cur_streak last_cur)
-                        | Some _ -> 
-                        None, Some {max_streak_start = last_cur.cur_streak_start; 
-                                    max_streak_len = last_cur.cur_streak_len}
-                    end in
-                (succ i), new_cur, new_max
-                end 
-                in
-            match List.fold_left detect_list (0, None, None) element_list with
-            | _, Some cur_streak, None ->
-                Some (streak_of_cur_streak cur_streak)
-            | _, Some cur_streak, Some max_streak when cur_streak.cur_streak_len > max_streak.max_streak_len -> 
-                Some (streak_of_cur_streak cur_streak)
-            | _, _, Some max_streak -> 
-                Some (streak_of_max_streak max_streak)
-            | _, _, None -> 
-                None
-        ;;
-
         let ints_to_value list =
-            (*assert (List.length list = 8);*)
+            assert (List.length list = 8);
             List.fold_left (fun a e -> 
                                 Uint128.(
                                 logor (shift_left a 16) (of_int e)
@@ -806,58 +753,18 @@ module IPv6 = struct
                 | Result.Ok (part1, part2) -> of_parsed_value (part1, part2)
         ;;
 
-        (* let to_string netaddr =
-            (*let shift_list = [112;96;80;64;48;32;16;0] in*)
-            (* Shift and 'and' each 16bit part of the value*)
-            let b16_values = List.map 
-                                (fun sw -> Uint128.(logand (shift_right netaddr sw) mask_16lsb)) 
-                                shift_list in
-            (* Find the longest list of consecutive zeros to be replaced by :: in the output *)
-            (* Convert value to hex, remove '0x' prefix *)
-            let uint_to_hex v = 
-                let hex_raw = Uint128.to_string_hex v in
-                let hex_raw_len = String.length hex_raw in
-                String.sub hex_raw 2 Stdlib.(hex_raw_len-2)
-                in
-            let value_list = List.map uint_to_hex b16_values in
-            match find_first_longest_streak (fun e -> Uint128.(compare e zero) = 0) b16_values with
-                (* No list of consecutive zeros found, just print every element separated by ':' *)
-                | None ->
-                String.concat ":" value_list
-                (* List of consecutive zeros found, replace it by '::', print every element separated 
-                    by ':' elsewhere *)
-                | Some streak -> 
-                begin
-                    let value_array = Array.of_list value_list in
-                    let part2_start = streak.streak_start + streak.streak_len in
-                    let part2_len = (Array.length value_array) - part2_start in
-                    let part1 = Array.to_list (Array.sub value_array 0 streak.streak_start) in
-                    let part2 = Array.to_list (Array.sub value_array part2_start part2_len) in
-                    String.concat ":" part1 ^ "::" ^ String.concat ":" part2
-                end
-        ;; *)
-
-        (* type either =
-        | Value of int
-        | Streak of int *)
-
         let serialize t netaddr = 
             let open Faraday in
             let open Stdlib in
             let rec loop addr_val shift_cnt last_streak_cnt last_max_streak =
                 match shift_cnt with
-                | 0 -> 
+                | 0 ->  (* base case *) 
+                    last_max_streak 
+                | _ ->  (* loop case *)
                 begin
-                    match last_max_streak with
-                    | Some lms when lms = 7 -> print_endline (string_of_int lms); write_char t ':'; last_max_streak
-                    | Some lms -> print_endline (string_of_int lms); last_max_streak
-                    | _ -> last_max_streak
-                end
-                | _ ->
-                begin
-                    let element = Uint128.(to_int (logand addr_val mask_16lsb)) in
+                    let element = Uint128.(logand addr_val mask_16lsb) in
                     let next_addr_val = Uint128.(shift_right addr_val 16) in
-                    let new_streak_cnt, new_max_streak = if element = 0 then
+                    let new_streak_cnt, new_max_streak = if element = Uint128.zero then
                                         begin
                                             match last_streak_cnt, last_max_streak with
                                             | None, _ -> Some 0, last_max_streak
@@ -873,111 +780,31 @@ module IPv6 = struct
                         raise (Serialize_error "No max streak but found local streak length > 0.")
                     | Some oms, Some nsc when oms = nsc && (nsc > 0) -> 
                         Some (oms - 1)
+                    | Some oms, Some nsc when oms = nsc && nsc = 0 && shift_cnt = 8 -> 
+                        write_char t ':'; 
+                        write_char t ':'; 
+                        None
                     | Some oms, Some nsc when oms = nsc && nsc = 0 -> 
-                        write_char t ':'; None
+                        write_char t ':'; 
+                        None
                     | _, _ -> 
                     begin
                         if shift_cnt > 1 then
                             write_char t ':';
-                        write_string t (string_of_int element);
-                        LE.write_uint16 t element;
+                        Serialize_helper.write_hex t (Uint128.to_int element);
                         overall_max_streak
                     end
-                    
                 end
                 in
             let _ = loop netaddr 8 None None in
             ()
+        ;;
         
         let to_string netaddr =
-            let t = Faraday.create 40 in
+            let t = Faraday.create Parser.max_str_length_address in
             serialize t netaddr;
             Faraday.serialize_to_string t
-
-
-        (* let serialize t netaddr =
-            (* [@tailcall] *)
-            let rec detect_streak (lso: int option) (cso: int option) (r: either list) (i: int list) : int option * either list =
-                match i with
-                | [] ->
-                begin
-                match lso, cso with
-                | None   , Some _                            ->  cso, r
-                | Some ls, Some cs when Stdlib.(cs > ls) ->  cso, r
-                | None   , None                              -> None, r
-                | Some _ , None                              ->  lso, r
-                | Some _ , Some _                            ->  lso, r
-                end
-                | ni :: ri -> 
-                begin
-                let vi = Uint128.(to_int (logand (shift_right netaddr ni) mask_16lsb)) in
-                if vi = 0 then
-                    match lso, cso with
-                    | None  , None    -> detect_streak None (Some 1) r ri
-                    | Some _, None    -> detect_streak lso  (Some 1) r ri
-                    | None  , Some cs -> detect_streak None (Some (cs + 1)) r ri
-                    | Some _, Some cs -> detect_streak lso  (Some (cs + 1)) r ri
-                else
-                    match lso, cso with
-                    | None   , None                              -> detect_streak None None ((Value vi) :: r) ri
-                    | Some _ , None                              -> detect_streak  lso None ((Value vi) :: r) ri
-                    | None   , Some cs                           -> detect_streak  cso None ((Value vi) :: (Streak cs) :: r) ri
-                    | Some ls, Some cs when Stdlib.(cs > ls) -> detect_streak  cso None ((Value vi) :: (Streak cs) :: r) ri
-                    | Some ls, Some _                            -> detect_streak  lso None ((Value vi) :: (Streak ls) :: r) ri
-                end
-                in
-            let rec combine (rlso: int option) (rl: either list) first =
-                let open Faraday in
-                match rl with
-                | [] -> ()
-                | head :: tails ->
-                    match rlso, head, first with
-                    | None,    Streak _ , _               -> raise (Parser_error "ERROR: found streak where none should be.")
-                    | None,     Value v, true            -> 
-                    begin
-                        write_string t (string_of_int v);
-                        combine None tails false
-                    end
-                    | None,     Value v, false           -> 
-                    begin
-                        write_char t ':';
-                        write_string t (string_of_int v);
-                        combine None tails false
-                    end
-                    | Some ls, Streak sl, _ when ls = sl -> 
-                    begin
-                        write_char t ':';
-                        combine None tails false
-                    end
-                    | Some _, Streak sl, _ -> 
-                    begin
-                        let rec print_streak tsl =
-                            if tsl = 0 then
-                                write_string t "0"
-                            else
-                            (
-                                write_string t "0:";
-                                print_streak (tsl - 1)
-                            )
-                            in
-                        print_streak sl;
-                        combine rlso tails first
-                    end
-                    | Some _,   Value v, true            ->
-                    begin
-                        write_string t (string_of_int v);
-                        combine rlso tails false
-                    end
-                    | Some _,   Value v, false           ->
-                    begin
-                        write_char t ':';
-                        write_string t (string_of_int v);
-                        combine rlso tails false
-                    end
-                    in
-            let min_streak, value_list = detect_streak None None [] shift_list in
-            combine min_streak value_list true
-        ;; *)
+        ;;
 
         let of_ipv4_address ipv4_address =
             let ipv4_value = Uint128.of_uint32 ipv4_address in
@@ -1025,7 +852,7 @@ module IPv6 = struct
             if Stdlib.(network_string_len > Parser.max_str_length_network 
                         || network_string_len < Parser.min_str_length_network) then
                         (
-                Printf.printf "ERROR: string of wrong size"; None
+                            Printf.printf "ERROR: string of wrong size"; None
                         )
             else
                 let network_range = Angstrom.parse_string ~consume:All Parser.parser_network network_string in
