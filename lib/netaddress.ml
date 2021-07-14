@@ -501,19 +501,6 @@ module MakeFromTo (B:NetworkObjectBase) = struct
 
 end
 
-module MakeInfix (A: NetworkAddress)(R: NetworkObject with type a = A.t)(N: NetworkObject with type a = A.t) = struct
-
-    let (<) (a) b = (A.compare a b) < 0;;
-    let (>) a b = (A.compare a b) > 0;;
-
-    let (+) = A.add;;
-    let (-) = A.sub;;
-    let (+.) = A.add_int;;
-    let (-.) = A.sub_int;;
-
-    let (@-) = R.make;;
-    let (@/) = N.make;;
-end
 
 (* module MakeNetObjectHelp (O:NetworkObject) = struct
 end *)

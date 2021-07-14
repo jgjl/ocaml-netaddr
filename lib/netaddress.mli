@@ -22,12 +22,8 @@ exception Parser_error of string
 
 module Parse_helper :
     sig
-        (* Read 8, 7, or 5 bit values in decimal or hex encoding *)
         val at_most : int -> 'a Angstrom.t -> 'a list Angstrom.t
         val limits : int -> int -> 'a Angstrom.t -> 'a list Angstrom.t
-        (* val read_5bit_dec : string Angstrom.t
-        val read_byte_dec : string Angstrom.t *)
-        (* val read_byte_hex : string Angstrom.t *)
         val read_7bit_dec : int Angstrom.t
         val read_16bit_hex : int Angstrom.t
     end
