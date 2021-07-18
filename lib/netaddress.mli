@@ -54,7 +54,6 @@ module Eui48 :
             val add : t -> t -> t
             val sub : t -> t -> t
             val get_bit : t -> int -> bool
-            val of_strings : string -> string -> string -> string -> string -> string -> int
             val to_string_bin : t -> string
             val to_string_oct : t -> string
             val to_string_hex : t -> string
@@ -69,7 +68,7 @@ module Eui48 :
             val parser : t Angstrom.t
 
             val to_string : t -> string
-            val of_string : string -> t
+            val of_string : string -> t option
 
         end
         module Range :
@@ -85,7 +84,7 @@ module Eui48 :
             val parser : t Angstrom.t 
 
             val to_string : t -> string
-            val of_string : string -> t
+            val of_string : string -> t option
 
             val get_address : t -> Address.t
             val get_last_address : t -> Address.t
@@ -133,7 +132,6 @@ module IPv4 :
             val add : t -> t -> t
             val sub : t -> t -> t
             val get_bit : t -> int -> bool
-            val of_strings : string -> string -> string -> string -> int
             val to_string_bin : t -> string
             val to_string_oct : t -> string
             val to_string_hex : t -> string
@@ -150,7 +148,7 @@ module IPv4 :
             val parser : t Angstrom.t
 
             val to_string : t -> string
-            val of_string : string -> t
+            val of_string : string -> t option
         end
         module Range :
         sig
@@ -165,7 +163,7 @@ module IPv4 :
             val parser : t Angstrom.t 
 
             val to_string : t -> string
-            val of_string : string -> t
+            val of_string : string -> t option
 
             val get_address : t -> Address.t
             val get_last_address : t -> Address.t
@@ -186,7 +184,7 @@ module IPv4 :
             val parser : t Angstrom.t 
 
             val to_string : t -> string
-            val of_string : string -> t
+            val of_string : string -> t option
 
             val get_address : t -> Address.t
             val get_last_address : t -> Address.t
@@ -249,7 +247,7 @@ module IPv6 : sig
             val parser : t Angstrom.t
 
             val to_string : t -> string
-            val of_string : string -> t
+            val of_string : string -> t option
 
         end
     module Range :
@@ -265,7 +263,7 @@ module IPv6 : sig
             val parser : t Angstrom.t
 
             val to_string : t -> string
-            val of_string : string -> t
+            val of_string : string -> t option
 
             val get_address : t -> Address.t
             val get_last_address : t -> Address.t
@@ -286,7 +284,7 @@ module IPv6 : sig
             val parser : t Angstrom.t 
 
             val to_string : t -> string
-            val of_string : string -> t
+            val of_string : string -> t option
 
             val get_address : t -> Address.t
             val get_last_address : t -> Address.t

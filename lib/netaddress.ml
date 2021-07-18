@@ -435,6 +435,9 @@ module MakeNetwork (A:Address) = struct
         network.prefix_len
     ;;
 
+    let size network = 
+        A.sub network.n_last network.n_first
+
     let make first prefix_len =
         let network_size_bits = A.bit_size - prefix_len in
         let network_size = A.(sub (shift_left A.one network_size_bits) A.one) in
