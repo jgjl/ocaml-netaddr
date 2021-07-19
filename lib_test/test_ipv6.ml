@@ -6,7 +6,7 @@ let run_parser parser param =
 
 let test_hex2int () =
   let run_twowaytest (hex_str_in, int_out) =
-    let result_int = run_parser Netaddress.Parse_helper.read_16bit_hex hex_str_in in
+    let result_int = run_parser (Netaddress.Parse_helper.create_nbyte_hex_reader true 2) hex_str_in in
     Alcotest.(check int) ("Conversion of " ^ hex_str_in ^ " to int " ^ (string_of_int int_out) ^ "-.") int_out result_int
   in
   let val_list = [

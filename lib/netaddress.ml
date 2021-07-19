@@ -121,10 +121,16 @@ module Parse_helper = struct
     ;;
 
     (*
-    Parse values in {0..2^5} in decimal format
+    Parse values in {0..2^n} in decimal format
     *)
-    let read_5bit_dec = 
-        let* n, r = (scan_state (2, 0) 
+    let create_nbit_dec_reader strict bit_size = 
+        let max_val = if strict then 
+            (1 lsl bit_size) - 1
+        else
+            1 lsl bit_size 
+            in
+        let max_dec_digits = int_of_float (ceil (log10 (float_of_int max_val))) in
+        let read_nbit_dec = let* n, r = (scan_state (max_dec_digits, 0) 
             (fun (n, v) c -> 
                 match n with
                 | 0 -> None
@@ -132,72 +138,36 @@ module Parse_helper = struct
                     match Char.code c with
                     | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> 
                         let new_val = v * 10 + dec_digit - 48 in
-                        if new_val <= 31 then
+                        if new_val <= max_val then
                             Some (n-1, new_val)
                         else
                             None
                     | _ -> None
                 )
-        ) in
-        match n with
-        | 2 -> fail "Empty 5bit decimal number"
-        | _ -> return r
-    ;;
-
-
-    (*
-    Parse values in {0..2^7} in decimal format
-    *)
-    let read_7bit_dec = 
-        let* n, r = (scan_state (3, 0) 
-            (fun (n, v) c -> 
-                match n with
-                | 0 -> None
-                | _ ->
-                    match Char.code c with
-                    | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> 
-                        let new_val = v * 10 + dec_digit - 48 in
-                        if new_val <= 127 then
-                            Some (n-1, new_val)
-                        else
-                            None
-                    | _ -> None
-                )
-        ) in
-        match n with
-        | 3 -> fail "Empty 7bit decimal number"
-        | _ -> return r
+            ) in
+            if n = max_dec_digits then
+                fail (Printf.sprintf "Empty %dbit decimal number" bit_size)
+            else 
+                return r
+                    in
+        read_nbit_dec
     ;;
 
     (*
-    Parse values in {0..2^8} in decimal format
+    Parse values in {0..2^n} in hexadecimal format
     *)
-    let read_8bit_dec = 
-        let* n, r = (scan_state (3, 0) 
-            (fun (n, v) c -> 
-                match n with
-                | 0 -> None
-                | _ ->
-                    match Char.code c with
-                    | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> 
-                        let new_val = v * 10 + dec_digit - 48 in
-                        if new_val <= 255 then
-                            Some (n-1, new_val)
-                        else
-                            None
-                    | _ -> None
-                )
-        ) in
-        match n with
-        | 3 -> fail "Empty 8bit decimal number"
-        | _ -> return r
-    ;;
-
-    (*
-    Parse values in {0..2^16} used for bytes in the IPv6-coloned hex notation.
-    *)
-    let read_16bit_hex = 
-        let* n, r = (scan_state (4, 0) 
+    let create_nbyte_hex_reader strict byte_size = 
+        let bit_size = byte_size * 8 in
+        let max_val = if strict then 
+            (1 lsl bit_size) - 1
+        else
+            1 lsl bit_size
+            in
+        (* let max_val = 1 lsl (byte_size * 8) in *)
+        print_endline ("max_val=" ^ (string_of_int max_val));
+        let max_dec_digits = int_of_float (ceil ((float_of_int bit_size) /. 4.)) in
+        print_endline ("max_dec_digits=" ^ (string_of_int max_dec_digits));
+        let read_nbit_dec = let* n, r = (scan_state (max_dec_digits, 0) 
             (fun (n, v) c -> 
                 match n with
                 | 0 -> None
@@ -211,36 +181,14 @@ module Parse_helper = struct
                         Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
                     | _ -> None
                 )
-        ) in
-        match n with
-        | 4 -> fail "Empty hex number"
-        | _ -> return r
+            ) in
+            if n = max_dec_digits then
+                fail (Printf.sprintf "Empty %dbyte hexadecimal number" byte_size)
+            else 
+                return r
+                    in
+        read_nbit_dec
     ;;
-
-    (*
-    Parse values in {0..2^n} in hex notation 
-    *)
-    let read_hex_bytes n_bytes = 
-        let* n, r = (scan_state (n_bytes, 0) 
-            (fun (n, v) c -> 
-                match n with
-                | 0 -> None
-                | _ ->
-                    match Char.code c with
-                    | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> 
-                        Some(n-1, v * 16 + dec_digit - 48)
-                    | hex_letter_upper when hex_letter_upper >= 65 && hex_letter_upper <= 60 -> 
-                        Some(n-1, v * 16 + hex_letter_upper - 65 + 10)
-                    | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> 
-                        Some(n-1, v * 16 + hex_letter_lower - 97 + 10)
-                    | _ -> None
-                )
-        ) in
-        match n with
-        | v when v = n_bytes -> fail "Empty hex number"
-        | _ -> return r
-    ;;
-
 end
 
 module Serialize_helper = struct
@@ -279,6 +227,7 @@ module type Address = sig
     val serializer : Faraday.t -> t -> unit
     val add : t -> t -> t
     val sub : t -> t -> t
+    val lognot : t -> t
 end
 
 module MakeAddress (N:Stdint.Int) = struct
@@ -420,8 +369,8 @@ end
 module MakeNetwork (A:Address) = struct
     type t = {n_first: A.t; n_last: A.t; prefix_len: int}
 
-    let min_str_length = A.min_str_length + 1 + A.min_str_length
-    let max_str_length = A.max_str_length + 1 + A.max_str_length
+    let min_str_length = A.min_str_length + 1 + 1
+    let max_str_length = A.max_str_length + 1 + 3
 
     let get_address n =
         n.n_first
@@ -440,11 +389,15 @@ module MakeNetwork (A:Address) = struct
 
     let make first prefix_len =
         let network_size_bits = A.bit_size - prefix_len in
+        let network_mask = A.(shift_left (lognot (shift_left A.one network_size_bits)) prefix_len) in
+        let first_masked = A.(logand first network_mask) in
         let network_size = A.(sub (shift_left A.one network_size_bits) A.one) in
-        let last = A.(add first network_size) in
         let divisible = A.(logand first network_size) in
-        if A.(compare divisible zero) == 0 then
+        if A.(compare first first_masked) == 0 && A.(compare divisible zero) == 0 then
+        begin
+            let last = A.(add first network_size) in
             Some {n_first= first; n_last=last; prefix_len= prefix_len}
+        end
         else 
             None
     ;;
@@ -453,7 +406,7 @@ module MakeNetwork (A:Address) = struct
         let open Angstrom in
         let* nw = lift2 make
             (A.parser <* char '/')
-            Parse_helper.read_7bit_dec
+            (Parse_helper.create_nbit_dec_reader false A.bit_size)
             in
         match nw with 
         | Some n -> return n 
@@ -547,7 +500,7 @@ module Eui48_Address = struct
     ;;
 
     let parser =
-        let read_byte_hex = read_hex_bytes 1 in
+        let read_byte_hex = create_nbyte_hex_reader true 1 in
         lift4 
             of_parsed_value
             (read_byte_hex <* colon)
@@ -635,6 +588,7 @@ module IPv4_Address = struct
     ;;
 
     let parser =
+        let read_8bit_dec = create_nbit_dec_reader true 8 in
         lift4
             of_parsed_value
             (read_8bit_dec <* dot)
@@ -751,6 +705,7 @@ module IPv6_Address = struct
 
 
     let parser =
+        let read_16bit_hex = create_nbyte_hex_reader true 2 in
         let* address = lift
                 of_parsed_value
                 (
