@@ -13,7 +13,7 @@ module type NetworkObjectBase = sig
     val parser : t Angstrom.t
 end
 
-module type NetworkObject = sig
+(* module type NetworkObject = sig
     type a
     type t
 
@@ -27,15 +27,15 @@ module type NetworkObject = sig
     val of_string : string -> t option
 
     val make : a -> a -> t
-end
+end *)
 
-module type StringOfTo = sig
+(* module type StringOfTo = sig
     type o 
     val to_string : o -> string
     val of_string : string -> o option
-end
+end *)
 
-module type NetworkAddress = sig
+(* module type NetworkAddress = sig
     type t
     
     val bit_size : int
@@ -78,7 +78,7 @@ module type NetworkType = sig
         include NetworkObject
         val make : n -> n -> t
     end
-end
+end *)
 
 module Parse_helper = struct
     open Angstrom
@@ -123,7 +123,7 @@ module Parse_helper = struct
     (*
     Parse values in {0..2^n} in decimal format
     *)
-    let create_nbit_dec_reader strict bit_size = 
+    let create_nbit_dec_reader ?strict:(strict=true) bit_size = 
         let max_val = if strict then 
             (1 lsl bit_size) - 1
         else
@@ -156,17 +156,14 @@ module Parse_helper = struct
     (*
     Parse values in {0..2^n} in hexadecimal format
     *)
-    let create_nbyte_hex_reader strict byte_size = 
+    let create_nbyte_hex_reader ?strict:(strict=true) byte_size = 
         let bit_size = byte_size * 8 in
         let max_val = if strict then 
             (1 lsl bit_size) - 1
         else
             1 lsl bit_size
             in
-        (* let max_val = 1 lsl (byte_size * 8) in *)
-        print_endline ("max_val=" ^ (string_of_int max_val));
         let max_dec_digits = int_of_float (ceil ((float_of_int bit_size) /. 4.)) in
-        print_endline ("max_dec_digits=" ^ (string_of_int max_dec_digits));
         let read_nbit_dec = let* n, r = (scan_state (max_dec_digits, 0) 
             (fun (n, v) c -> 
                 match n with
@@ -406,7 +403,7 @@ module MakeNetwork (A:Address) = struct
         let open Angstrom in
         let* nw = lift2 make
             (A.parser <* char '/')
-            (Parse_helper.create_nbit_dec_reader false A.bit_size)
+            (Parse_helper.create_nbit_dec_reader ~strict:false A.bit_size)
             in
         match nw with 
         | Some n -> return n 
@@ -480,15 +477,6 @@ module Eui48_Address = struct
         String.sub hex_raw 2 Stdlib.(hex_raw_len-2)
     ;;
 
-    let of_strings b1 b2 b3 b4 b5 b6 =
-        (int_of_string b6) lor
-        (((int_of_string b5) lsl 8) lor
-        (((int_of_string b4) lsl 16) lor
-        (((int_of_string b3) lsl 24) lor
-        (((int_of_string b2) lsl 32) lor
-        ((int_of_string b1) lsl 40)))))
-    ;;
-
     let of_parsed_value b1 b2 b3 b4 b5 b6 =
         let open Uint48 in
         logor (of_int b6)
@@ -500,7 +488,7 @@ module Eui48_Address = struct
     ;;
 
     let parser =
-        let read_byte_hex = create_nbyte_hex_reader true 1 in
+        let read_byte_hex = create_nbyte_hex_reader 1 in
         lift4 
             of_parsed_value
             (read_byte_hex <* colon)
@@ -588,7 +576,7 @@ module IPv4_Address = struct
     ;;
 
     let parser =
-        let read_8bit_dec = create_nbit_dec_reader true 8 in
+        let read_8bit_dec = create_nbit_dec_reader 8 in
         lift4
             of_parsed_value
             (read_8bit_dec <* dot)
@@ -705,7 +693,7 @@ module IPv6_Address = struct
 
 
     let parser =
-        let read_16bit_hex = create_nbyte_hex_reader true 2 in
+        let read_16bit_hex = create_nbyte_hex_reader 2 in
         let* address = lift
                 of_parsed_value
                 (
@@ -801,8 +789,6 @@ module IPv6_Network = struct
 end
 
 module IPv6 = struct
-    open Stdint
-
     module Address = struct
         include IPv6_Address 
         include MakeFromTo(IPv6_Address)
