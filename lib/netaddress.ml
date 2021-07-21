@@ -13,79 +13,13 @@ module type NetworkObjectBase = sig
     val parser : t Angstrom.t
 end
 
-(* module type NetworkObject = sig
-    type a
-    type t
-
-    val min_str_length : int
-    val max_str_length : int
-
-    val serializer : Faraday.t -> t -> unit
-    val parser : t Angstrom.t
-
-    val to_string : t -> string
-    val of_string : string -> t option
-
-    val make : a -> a -> t
-end *)
-
-(* module type StringOfTo = sig
-    type o 
-    val to_string : o -> string
-    val of_string : string -> o option
-end *)
-
-(* module type NetworkAddress = sig
-    type t
-    
-    val bit_size : int
-    val zero : t
-    val one : t
-    val max : t
-    val logand : t -> t -> t
-    val logor : t -> t -> t
-    val logxor : t -> t -> t
-    val lognot : t -> t
-    val shift_left : t -> int -> t
-    val shift_right : t -> int -> t
-    val compare : t -> t -> int
-    val add_int : t -> int -> t
-    val sub_int : t -> int -> t
-    val add : t -> t -> t
-    val sub : t -> t -> t
-    val get_bit : t -> int -> bool
-
-    val serializer : Faraday.t -> t -> unit
-    val parser : Faraday.t -> t -> unit
-
-    val to_string : t -> string
-    val of_string : string -> t option
-end
-
-module type NetworkType = sig
-    type n
-
-    module type Address = sig
-        include NetworkAddress with type t := n
-    end
-
-    module type Range = sig 
-        include NetworkObject
-        val make : n -> n -> t
-    end
-
-    module type Network = sig
-        include NetworkObject
-        val make : n -> n -> t
-    end
-end *)
 
 module Parse_helper = struct
     open Angstrom
 
     let at_most n p =
-        if n < 0 
-        then fail "count n < 0"
+        if n < 0 then 
+            fail "count n < 0"
         else
             let rec loop = function
             | 0 -> return []
