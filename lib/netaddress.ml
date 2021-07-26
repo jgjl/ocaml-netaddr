@@ -619,6 +619,8 @@ let mask_third_16lsb = Uint128.of_string "0xffff00000000"
     ;;
 
     let of_parsed_value (part1, part2) : t option =
+        print_endline ("list1=" ^ (String.concat "," (List.map string_of_int part1)));
+        print_endline ("list2=" ^ (String.concat "," (List.map string_of_int part2)));
         let open Stdlib in
         let missing_length = 8 - ((List.length part1) + (List.length part2)) in
         if missing_length = 0 then
@@ -654,10 +656,25 @@ let mask_third_16lsb = Uint128.of_string "0xffff00000000"
         | None -> fail "Creating IPv6 address object failed."
     ;;
 
-    let parse_ipv4_bytes b1 =
+    let parse_ipv4_bytes_sf b1 =
         let read_8bit_dec = create_nbit_dec_reader 8 in
+        print_endline ("parse_ipv4_bytes_sf b1=" ^ (string_of_int b1));
         lift3
             (fun b2 b3 b4 -> [ b1 * 8 lor b2; b3 * 8 lor b4])
+            (read_8bit_dec <* dot)
+            (read_8bit_dec <* dot)
+            read_8bit_dec
+    ;;
+
+    let parse_ipv4_bytes =
+        let read_8bit_dec = create_nbit_dec_reader 8 in
+        print_endline "parse_ipv4_bytes";
+        lift4
+            (fun b1 b2 b3 b4 -> [ 
+                (b3 lsl 8) lor b4;
+                (b1 lsl 8) lor b2; 
+                ])
+            (read_8bit_dec <* dot)
             (read_8bit_dec <* dot)
             (read_8bit_dec <* dot)
             read_8bit_dec
@@ -673,27 +690,37 @@ let mask_third_16lsb = Uint128.of_string "0xffff00000000"
             | remainder, _ when remainder = 0 -> 
                 return (fst, (new_val :: snd))
             | remainder, _ when remainder = 1 -> 
-                lift (fun v -> (fst, (v :: new_val :: snd))) read_16bit_hex
+                print_endline "3";
+                choice [
+                    lift (fun v -> (fst, (v :: new_val :: snd))) read_16bit_hex;
+                    return (fst, (new_val :: snd));
+                ]
             | _, _ -> 
+                begin
+                print_endline ("2 remainder=" ^ (string_of_int remainder));
                 choice [
                     parse_snd >>= (loop_snd (remainder-1) (fst, (new_val :: snd)));
                     colon *> (return (fst,snd));
                     return (fst, (new_val :: snd));
                 ]
+                end
             in
         let rec loop_fst (remainder: int) (result: int list) (new_val: int) : (int list * int list) Angstrom.t = 
             match remainder,new_val with
             | remainder, _ when remainder = 1 -> 
+                print_endline ("fst.1 remainder=" ^ (string_of_int remainder));
                 lift (fun v -> (v :: new_val :: result),[]) read_16bit_hex
-            | remainder, n_v when remainder > 2 && new_val < 256 -> 
+            | remainder, n_v when remainder > 1 -> 
                 (
+                    print_endline ("fst.2 remainder=" ^ (string_of_int remainder));
                     choice [
                         parse_fst >>= (loop_fst (remainder-1) (n_v :: result));
-                        parse_snd >>= (loop_snd (remainder-3) (n_v :: result, []));
-                        lift (fun ipv4 -> (ipv4 @ result), []) (parse_ipv4_bytes new_val)
+                        parse_snd >>= (loop_snd (remainder-2) (n_v :: result, []));
+                        parse_ipv4_bytes >>| (fun ipv4 -> (ipv4 @ (n_v :: result)), []) 
                     ]
                 )
             | _, _ -> 
+                print_endline ("fst.3 remainder=" ^ (string_of_int remainder));
                 choice [
                     parse_fst >>= (loop_fst (remainder-1) (new_val :: result));
                     parse_snd >>= (loop_snd (remainder-3) (new_val :: result, []));
