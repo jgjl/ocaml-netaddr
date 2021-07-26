@@ -1,4 +1,5 @@
 
+exception Programming_error of string
 exception Result_out_of_range of string
 exception Parser_error of string
 exception Serialize_error of string
@@ -90,13 +91,8 @@ module Parse_helper = struct
     (*
     Parse values in {0..2^n} in hexadecimal format
     *)
-    let create_nbyte_hex_reader ?strict:(strict=true) byte_size = 
+    let create_nbyte_hex_reader byte_size = 
         let bit_size = byte_size * 8 in
-        let max_val = if strict then 
-            (1 lsl bit_size) - 1
-        else
-            1 lsl bit_size
-            in
         let max_dec_digits = int_of_float (ceil ((float_of_int bit_size) /. 4.)) in
         let read_nbit_dec = let* n, r = (scan_state (max_dec_digits, 0) 
             (fun (n, v) c -> 
@@ -120,6 +116,13 @@ module Parse_helper = struct
                     in
         read_nbit_dec
     ;;
+
+    let parse_hex_char input =
+        match Char.code input with
+        | dec_digit when dec_digit >= 48 && dec_digit <= 57 -> Some (dec_digit - 48)
+        | hex_letter_upper when hex_letter_upper >= 65 && hex_letter_upper <= 60 -> Some (hex_letter_upper - 65 + 10)
+        | hex_letter_lower when hex_letter_lower >= 97 && hex_letter_lower <= 102 -> Some (hex_letter_lower - 97 + 10)
+        | _ -> None
 end
 
 module Serialize_helper = struct
@@ -601,12 +604,12 @@ module IPv6_Address = struct
 
     let min_str_length = 2
     let max_str_length = 39
+let mask_third_16lsb = Uint128.of_string "0xffff00000000"
 
     let mask_16lsb = Uint128.of_string "0xffff"
     let mask_32lsb = Uint128.of_string "0xffffffff"
     let mask_48lsb = Uint128.of_string "0xffffffffffff"
-    let mask_third_16lsb = Uint128.of_string "0xffff00000000"
-
+    
 
     let ints_to_value list =
         assert (List.length list = 8);
@@ -619,14 +622,14 @@ module IPv6_Address = struct
         let open Stdlib in
         let missing_length = 8 - ((List.length part1) + (List.length part2)) in
         if missing_length = 0 then
-            Some (ints_to_value (part1 @ part2))
+            Some (ints_to_value (List.rev part1 @ List.rev part2))
         else
-            let complete_int_list = (List.concat [part1; List.init missing_length (fun _ -> 0); part2]) in
+            let complete_int_list = (List.concat [List.rev part1; List.init missing_length (fun _ -> 0); List.rev part2]) in
             Some (ints_to_value complete_int_list)
     ;;
 
 
-    let parser =
+    let parser_alt =
         let read_16bit_hex = create_nbyte_hex_reader 2 in
         let* address = lift
                 of_parsed_value
@@ -650,6 +653,65 @@ module IPv6_Address = struct
         | Some n -> return n 
         | None -> fail "Creating IPv6 address object failed."
     ;;
+
+    let parse_ipv4_bytes b1 =
+        let read_8bit_dec = create_nbit_dec_reader 8 in
+        lift3
+            (fun b2 b3 b4 -> [ b1 * 8 lor b2; b3 * 8 lor b4])
+            (read_8bit_dec <* dot)
+            (read_8bit_dec <* dot)
+            read_8bit_dec
+    ;;
+
+    let parser = 
+        let open Angstrom in
+        let read_16bit_hex = create_nbyte_hex_reader 2 in
+        let parse_fst = read_16bit_hex <* colon in
+        let parse_snd = colon *> read_16bit_hex in
+        let rec loop_snd (remainder: int) (fst,snd: int list * int list) (new_val: int) : (int list * int list) Angstrom.t = 
+            match remainder, new_val with
+            | remainder, _ when remainder = 0 -> 
+                return (fst, (new_val :: snd))
+            | remainder, _ when remainder = 1 -> 
+                lift (fun v -> (fst, (v :: new_val :: snd))) read_16bit_hex
+            | _, _ -> 
+                choice [
+                    parse_snd >>= (loop_snd (remainder-1) (fst, (new_val :: snd)));
+                    colon *> (return (fst,snd));
+                    return (fst, (new_val :: snd));
+                ]
+            in
+        let rec loop_fst (remainder: int) (result: int list) (new_val: int) : (int list * int list) Angstrom.t = 
+            match remainder,new_val with
+            | remainder, _ when remainder = 1 -> 
+                lift (fun v -> (v :: new_val :: result),[]) read_16bit_hex
+            | remainder, n_v when remainder > 2 && new_val < 256 -> 
+                (
+                    choice [
+                        parse_fst >>= (loop_fst (remainder-1) (n_v :: result));
+                        parse_snd >>= (loop_snd (remainder-3) (n_v :: result, []));
+                        lift (fun ipv4 -> (ipv4 @ result), []) (parse_ipv4_bytes new_val)
+                    ]
+                )
+            | _, _ -> 
+                choice [
+                    parse_fst >>= (loop_fst (remainder-1) (new_val :: result));
+                    parse_snd >>= (loop_snd (remainder-3) (new_val :: result, []));
+                ]
+            in
+        let* address = lift
+            of_parsed_value
+            (
+                choice [
+                    parse_fst >>= (loop_fst 7 []);
+                    (colon *> parse_snd) >>= (loop_snd 5 ([],[]));
+                    (* colon *> colon *> return ([],[]); *)
+                ]
+            )
+            in
+        match address with 
+        | Some n -> return n 
+        | None -> fail "Creating IPv6 address object failed."
 
     let serializer t netaddr = 
         let open Faraday in

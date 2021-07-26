@@ -25,7 +25,7 @@ module Parse_helper :
         val at_most : int -> 'a Angstrom.t -> 'a list Angstrom.t
         val limits : int -> int -> 'a Angstrom.t -> 'a list Angstrom.t
         val create_nbit_dec_reader : ?strict:bool -> int -> int Angstrom.t
-        val create_nbyte_hex_reader : ?strict:bool -> int -> int Angstrom.t
+        val create_nbyte_hex_reader : int -> int Angstrom.t
     end
 
 module Eui48 :
