@@ -707,7 +707,6 @@ let mask_third_16lsb = Uint128.of_string "0xffff00000000"
                 choice [
                     colon *> parse_ipv4_bytes >>| (fun ipv4 -> (fst, (ipv4 @ (new_val :: snd))));
                     parse_snd >>= (loop_snd (remainder-1) (fst, (new_val :: snd)));
-                    colon *> (return (fst,snd));
                     return (fst, (new_val :: snd));
                 ]
                 end
@@ -732,7 +731,8 @@ let mask_third_16lsb = Uint128.of_string "0xffff00000000"
                     choice [
                         parse_fst >>= (loop_fst (remainder-1) (n_v :: result));
                         parse_snd >>= (loop_snd (remainder-2) (n_v :: result, []));
-                        colon *> parse_ipv4_bytes >>| (fun ipv4 -> (ipv4 @ (n_v :: result)), []) 
+                        colon *> parse_ipv4_bytes >>| (fun ipv4 -> (ipv4 @ (n_v :: result)), []);
+                        colon *> (return (n_v::result,[]));
                     ]
                 )
             | _, _ -> 
@@ -749,7 +749,7 @@ let mask_third_16lsb = Uint128.of_string "0xffff00000000"
                     parse_fst >>= (loop_fst 7 []);
                     (colon *> colon *> parse_ipv4_bytes) >>| (fun ipv4 -> ([], ipv4));
                     (colon *> parse_snd) >>= (loop_snd 5 ([],[]));
-                    (* colon *> colon *> return ([],[]); *)
+                    colon *> colon *> return ([],[]);
                 ]
             )
             in

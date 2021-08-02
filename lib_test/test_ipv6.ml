@@ -135,7 +135,7 @@ let test_str2netaddr () =
     ("9:", "");
     (":1", "");
     ("1", "");
-    ("1:2::6:7:", "1:2::6:7");
+    ("1:2::6:7:", "");
   ] in
   List.iter run_twowaytest addr_list
 
