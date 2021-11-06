@@ -33,7 +33,7 @@ module type Address = sig
 end
 
 
-module MakeAddress (N:Stdint.Int) = struct
+module MakeAddress (N:Stdint.Int) : Address = struct
   let bit_size = N.bits
   let zero = N.zero
   let one = N.one
@@ -77,21 +77,21 @@ module MakeAddress (N:Stdint.Int) = struct
 
   let get_bit netaddr index =
     N.(
-       (compare (logand (shift_right netaddr Pervasives.(bits - index)) one) one) == 0
+       (compare (logand (shift_right netaddr Stdlib.(bits - index)) one) one) == 0
     )
 
   let to_bin_list address =
     let rec extract_lsb i value =
-      if Pervasives.(i = 0) then
+      if Stdlib.(i = 0) then
         []
       else
         let next_value = N.shift_right value 1 in
-        N.to_int (N.logand N.one value) :: (extract_lsb Pervasives.(i-1) next_value)
+        N.to_int (N.logand N.one value) :: (extract_lsb Stdlib.(i-1) next_value)
       in
     List.rev (extract_lsb N.bits address)
   
   let of_bin_list bin_list = 
-    if Pervasives.((List.length bin_list) > N.bits) then None
+    if Stdlib.((List.length bin_list) > N.bits) then None
     else
     let two = N.add N.one N.one in
     try Some (List.fold_left (fun a e ->
@@ -191,7 +191,7 @@ module Eui48 = struct
   let uint_to_hex v = 
     let hex_raw = Uint48.to_string_hex v in
     let hex_raw_len = String.length hex_raw in
-    String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
+    String.sub hex_raw 2 Stdlib.(hex_raw_len-2)
   ;;
 
   let of_parsed_value (b1, b2, b3, b4, b5, b6) =
@@ -205,7 +205,7 @@ module Eui48 = struct
     )
 
   let of_string s =
-    Pervasives.(
+    Stdlib.(
       if (String.length s) > Netaddress_parser.Eui48.max_str_length_address
       || (String.length s) < Netaddress_parser.Eui48.min_str_length_address then
         None
@@ -251,7 +251,7 @@ module IPv4 = struct
                     (shift_left (of_int b1) 24))))
 
     let of_string s =
-      Pervasives.(
+      Stdlib.(
         if (String.length s) > Netaddress_parser.IPv4.max_str_length_address
         || (String.length s) < Netaddress_parser.IPv4.min_str_length_address then
           None
@@ -282,7 +282,7 @@ module IPv4 = struct
     include MakeRange(Address)
 
     let of_string s =
-      if Pervasives.((String.length s) > Netaddress_parser.IPv4.max_str_length_range
+      if Stdlib.((String.length s) > Netaddress_parser.IPv4.max_str_length_range
                   || (String.length s) < Netaddress_parser.IPv4.min_str_length_range) then
         None
       else
@@ -296,7 +296,7 @@ module IPv4 = struct
 
     let of_string network_string =
       let network_string_len = String.length network_string in
-      if Pervasives.(network_string_len > Netaddress_parser.IPv4.max_str_length_network
+      if Stdlib.(network_string_len > Netaddress_parser.IPv4.max_str_length_network
                   || network_string_len < Netaddress_parser.IPv4.min_str_length_network) then
         None
       else
@@ -350,7 +350,7 @@ module IPv6 = struct
     include MakeAddress(Uint128)
 
     let find_first_longest_streak element_selector element_list =
-      Pervasives.(
+      Stdlib.(
         let detect_list (i, cur_opt, max_opt) value = 
         begin
           let element_selected = element_selector value in
@@ -397,7 +397,7 @@ module IPv6 = struct
                         )) Uint128.zero list
 
     let of_parsed_value (part1, part2) =
-      Pervasives.(
+      Stdlib.(
         let missing_length = 8 - ((List.length part1) + (List.length part2)) in
         if missing_length = 0 then
           Some (ints_to_value (part1 @ part2))
@@ -408,7 +408,7 @@ module IPv6 = struct
 
     let of_string ipv6_string =
       let ipv6_string_len = String.length ipv6_string in
-      if Pervasives.(ipv6_string_len > Netaddress_parser.IPv6.max_str_length_address 
+      if Stdlib.(ipv6_string_len > Netaddress_parser.IPv6.max_str_length_address 
                   || ipv6_string_len < Netaddress_parser.IPv6.min_str_length_address) then
         None
       else
@@ -428,7 +428,7 @@ module IPv6 = struct
       let uint_to_hex v = 
         let hex_raw = Uint128.to_string_hex v in
         let hex_raw_len = String.length hex_raw in
-        String.sub hex_raw 2 Pervasives.(hex_raw_len-2)
+        String.sub hex_raw 2 Stdlib.(hex_raw_len-2)
         in
       let value_list = List.map uint_to_hex b16_values in
       match find_first_longest_streak (fun e -> Uint128.(compare e zero) = 0) b16_values with
@@ -466,7 +466,7 @@ module IPv6 = struct
 
     let of_string range_string =
       let range_string_len = String.length range_string in
-      if Pervasives.(range_string_len > Netaddress_parser.IPv6.max_str_length_range 
+      if Stdlib.(range_string_len > Netaddress_parser.IPv6.max_str_length_range 
                   || range_string_len < Netaddress_parser.IPv6.min_str_length_range) then
         None
       else
@@ -487,7 +487,7 @@ module IPv6 = struct
 
     let of_string network_string =
       let network_string_len = String.length network_string in
-      if Pervasives.(network_string_len > Netaddress_parser.IPv6.max_str_length_network 
+      if Stdlib.(network_string_len > Netaddress_parser.IPv6.max_str_length_network 
                   || network_string_len < Netaddress_parser.IPv6.max_str_length_network) then
         None
       else
