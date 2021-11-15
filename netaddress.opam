@@ -19,7 +19,6 @@ build-test: [
 
 depends: [
   "dune"     {build & >="1.0"}
-  "configurator" {build}
   "stdint"
   "angstrom"
   "faraday"
